@@ -61,7 +61,7 @@ export function CommandMenu({
         size="icon-sm"
         aria-label="Search or jump to"
         onClick={() => setOpen(true)}
-        className="text-muted-foreground lg:size-auto lg:h-7 lg:w-56 lg:justify-start lg:gap-2 lg:px-2.5"
+        className="touch-target text-muted-foreground lg:size-auto lg:h-7 lg:w-56 lg:justify-start lg:gap-2 lg:px-2.5"
       >
         <Search className="size-3.5" />
         <span className="hidden truncate lg:inline">Search or jump to…</span>

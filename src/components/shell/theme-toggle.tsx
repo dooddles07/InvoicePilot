@@ -21,7 +21,12 @@ export function ThemeToggle() {
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <Button variant="ghost" size="icon-sm" aria-label="Change theme">
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label="Change theme"
+            className="touch-target"
+          >
             {/* Before hydration the resolved theme is unknown; showing the sun
                 avoids a flash of the wrong icon. */}
             {mounted && theme === "dark" ? (

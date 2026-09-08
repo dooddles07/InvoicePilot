@@ -60,7 +60,7 @@ export function SiteHeader() {
           <Button
             variant="ghost"
             size="icon-sm"
-            className="md:hidden"
+            className="touch-target md:hidden"
             aria-label={open ? "Close menu" : "Open menu"}
             aria-expanded={open}
             onClick={() => setOpen((v) => !v)}

@@ -179,6 +179,7 @@ export function PipelineBoard({ columns }: { columns: Column[] }) {
                               <Button
                                 variant="ghost"
                                 size="icon-xs"
+                                className="touch-target"
                                 aria-label={`Move ${invoice.number} to another stage`}
                               >
                                 <Move className="size-3" />

@@ -46,7 +46,7 @@ export function TopBar({
 
   return (
     <header className="bg-background/95 supports-[backdrop-filter]:bg-background/80 sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 border-b px-3 backdrop-blur sm:px-4">
-      <SidebarTrigger aria-label="Toggle navigation" />
+      <SidebarTrigger aria-label="Toggle navigation" className="touch-target" />
       <Separator orientation="vertical" className="mr-1 hidden h-4 lg:block" />
 
       <h2 className="truncate text-[13px] font-medium lg:hidden">{current}</h2>
@@ -71,7 +71,7 @@ export function TopBar({
                   variant="ghost"
                   size="icon-sm"
                   aria-label={`Notifications, ${notifications.length} unread`}
-                  className="relative"
+                  className="touch-target relative"
                 >
                   <Bell className="size-4" />
                   {notifications.length > 0 ? (
