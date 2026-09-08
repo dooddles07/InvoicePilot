@@ -1,0 +1,37 @@
+# InvoicePilot
+
+# Search and AI-answer crawlers are welcome. Blocking them would mean the
+# assistants that buyers increasingly ask "what is the best AR tool and what
+# does it cost?" cannot cite us at all.
+
+User-agent: *
+Allow: /
+
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+# Bulk training-corpus scraping is a different trade to being cited in an
+# answer, and this one returns nothing.
+User-agent: CCBot
+Disallow: /
+
+# The demo workspace is public on purpose, but it is not the marketing site.
+User-agent: *
+Disallow: /settings/
+
+Sitemap: https://invoicepilot.com/sitemap.xml

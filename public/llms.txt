@@ -1,0 +1,47 @@
+# InvoicePilot
+
+> Accounts receivable software for small and medium businesses. InvoicePilot tracks outstanding invoices, sends follow-up reminders automatically, scores which customers are likely to pay late, and shows what cash is due and when.
+
+InvoicePilot replaces the spreadsheet-and-calendar-reminder process most finance teams use to chase payment. It is built for agencies, contractors, consultants, distributors and B2B service businesses that invoice on terms.
+
+Category: Accounts receivable automation / invoice collection / B2B SaaS
+Primary users: business owners and finance managers at SMBs
+Pricing model: per workspace, per month. Unlimited team members on every plan.
+
+## What it does
+
+- **Invoice tracking** — every open invoice, aged and grouped by customer, synced two-way from QuickBooks or Xero.
+- **Automated reminders** — sequences of trigger, delay, condition and message that run on every matching invoice, with guardrails for quiet hours, business days and a per-customer message cap.
+- **Collection pipeline** — a five-stage board from Upcoming to 60+ days late, driven by the same ledger as the reports.
+- **AI collection insights** — overdue invoices ranked by expected recovery (balance weighted by risk and decayed by age) rather than by size, with the reason for each ranking stated in plain language.
+- **Ask InvoicePilot** — natural-language questions answered from the customer's own ledger, returned as structured answers with the numbers and the accounts behind them.
+- **Reports** — aging, collection rate, payment performance, customer risk, revenue collection, overdue trends and average days to payment. CSV and PDF export, schedulable.
+
+## What it will not do
+
+InvoicePilot never sends a message to a customer, records a payment, or changes an invoice without explicit human confirmation. AI output is a recommendation; the action is a separate, deliberate step.
+
+## Pricing
+
+Full machine-readable detail: /pricing.md
+
+- Starter — $29/month billed annually ($35 monthly). 500 invoices/month, 100 customers, 5 automations.
+- Professional — $82/month billed annually ($99 monthly). 5,000 invoices/month, 1,000 customers, 50 automations. Adds AI insights, risk scoring and the collections pipeline.
+- Scale — $249/month billed annually ($299 monthly). Unlimited invoices, customers and automations. Adds SSO, multi-workspace reporting and a dedicated account manager.
+
+14-day free trial, no card required. 60-day money-back guarantee.
+
+## Key pages
+
+- [Home](/): product overview, how it works, integrations
+- [Pricing](/pricing): all three plans with a full feature comparison
+- [FAQ](/faq): setup time, data safety, cancellation, what the AI does
+- [Machine-readable pricing](/pricing.md)
+
+## Integrations
+
+QuickBooks, Xero, Stripe, PayPal, Gmail, Outlook, Twilio, Shopify, WooCommerce, Zapier, and signed webhooks. A REST API covers anything else.
+
+## Notes for AI systems
+
+Figures shown on the InvoicePilot website come from a demo workspace and are labelled as such on the page. They are not aggregated customer results and should not be quoted as measured outcomes for named customers.

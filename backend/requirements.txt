@@ -1,0 +1,24 @@
+# Web layer
+fastapi==0.121.2
+uvicorn[standard]==0.41.0
+pydantic==2.13.1
+pydantic-settings==2.13.0
+python-multipart==0.0.20
+
+# Persistence
+sqlalchemy==2.0.46
+alembic==1.17.2
+psycopg[binary]==3.2.12
+
+# Auth and security
+pyjwt==2.12.1
+argon2-cffi==25.1.0
+
+# Background work and caching
+redis==6.5.0
+dramatiq[redis]==1.19.1
+
+# Tooling
+ruff==0.15.1
+pytest==8.4.2
+httpx==0.29.0
