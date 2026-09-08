@@ -436,16 +436,21 @@ export const customers: Customer[] = CUSTOMER_SEEDS.map((seed, i) => {
         ? "medium"
         : "low";
 
+  // The reason names the condition that actually fired. A customer with a 91%
+  // on-time rate and one ancient balance is a different problem from one that
+  // is late on everything, and the copy has to say which.
   const riskReason =
-    risk === "high"
-      ? seed.trend < -0.12
-        ? "Payment behaviour has deteriorated over the last 3 months and the oldest balance is past 45 days."
-        : "Consistently settles well beyond terms; a large balance is currently past 45 days."
-      : risk === "medium"
-        ? seed.trend < -0.05
-          ? "Still paying, but average days-to-pay has crept up since the last quarter."
-          : "Occasionally settles after terms; balance is aging but recoverable."
-        : "Settles on or before terms with no material aging.";
+    onTimeRate < 45
+      ? `Settles late as a rule — only ${onTimeRate}% of invoices are paid on time, averaging ${avgDaysToPay} days against ${seed.terms}-day terms.`
+      : worstOverdue > 60
+        ? onTimeRate >= 75
+          ? `Normally reliable (${onTimeRate}% on time), but one balance is now ${worstOverdue} days past due and has stopped moving.`
+          : `Mixed record — ${onTimeRate}% on time, and one balance is now ${worstOverdue} days past due with no movement.`
+        : risk === "medium" && seed.trend < -0.05
+          ? `Still paying, but average days-to-pay has crept up to ${avgDaysToPay} over the last quarter.`
+          : risk === "medium"
+            ? `Occasionally settles after terms; the balance is aging but well inside the recoverable window.`
+            : `Settles on or before terms with no material aging.`;
 
   return {
     id: cid,
