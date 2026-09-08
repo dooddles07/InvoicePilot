@@ -341,3 +341,52 @@ export interface UsageMeter {
   used: number;
   limit: number;
 }
+
+/* ---------- settings ---------- */
+
+export interface EmailTemplate {
+  id: UUID;
+  workspace_id: UUID;
+  name: string;
+  subject: string;
+  body: string;
+  used_by: string[];
+  updated_at: ISODate;
+}
+
+export interface ApiKey {
+  id: UUID;
+  workspace_id: UUID;
+  name: string;
+  /** Only the last four characters are ever returned by the API. */
+  last_four: string;
+  scopes: ("read" | "write")[];
+  created_at: ISODate;
+  last_used_at: ISODate | null;
+}
+
+export interface WebhookEndpoint {
+  id: UUID;
+  workspace_id: UUID;
+  url: string;
+  events: string[];
+  status: "active" | "failing" | "paused";
+  last_delivery_at: ISODate | null;
+  failure_count: number;
+}
+
+export interface NotificationPreference {
+  id: string;
+  label: string;
+  description: string;
+  email: boolean;
+  in_app: boolean;
+}
+
+export interface ReportDefinition {
+  id: string;
+  name: string;
+  description: string;
+  question: string;
+  cadence: "on demand" | "weekly" | "monthly";
+}

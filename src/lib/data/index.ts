@@ -468,12 +468,21 @@ export function answerFor(question: string): AIAnswer {
   const kpis = getKpis();
   const q = question.toLowerCase();
 
-  const topContributors = rankedByCustomer.slice(0, 3).map((inv) => ({
-    label: inv.customer_name,
-    value_cents: inv.balance_cents,
-    share: (inv.balance_cents / (overdueTotal() || 1)) * 100,
-    href: `/invoices/${inv.id}`,
-  }));
+  // Contributors are ranked by exposure, largest first — a list headed
+  // "main contributors" that runs 5%, 5%, 8% reads as a bug, whatever the
+  // underlying ordering meant. The recommendation below still follows the
+  // recovery ranking, and says so.
+  const topContributors = [...rankedByCustomer]
+    .sort((a, b) => b.balance_cents - a.balance_cents)
+    .slice(0, 3)
+    .map((inv) => ({
+      label: inv.customer_name,
+      value_cents: inv.balance_cents,
+      share: (inv.balance_cents / (overdueTotal() || 1)) * 100,
+      href: `/invoices/${inv.id}`,
+    }));
+
+  const bestNext = rankedByCustomer[0];
 
   if (q.includes("collect") && q.includes("month")) {
     return {
@@ -533,7 +542,7 @@ export function answerFor(question: string): AIAnswer {
     return {
       id: "ans_priority",
       question,
-      headline: `Work these three invoices first — they carry ${topContributors
+      headline: `Three invoices carry ${topContributors
         .reduce((s, c) => s + c.share, 0)
         .toFixed(0)}% of your overdue balance.`,
       detail:
@@ -544,7 +553,7 @@ export function answerFor(question: string): AIAnswer {
         direction: null,
       })),
       contributors: topContributors,
-      recommended_action: `Contact ${topContributors[0]?.label ?? "the top account"} today`,
+      recommended_action: `Contact ${bestNext?.customer_name ?? "the top account"} today`,
       action_kind: "send_reminder",
       requires_confirmation: true,
     };
@@ -564,7 +573,7 @@ export function answerFor(question: string): AIAnswer {
       { label: "Total outstanding", value: fmt(kpis.outstanding_cents), direction: kpis.outstanding_change >= 0 ? "up" : "down" },
     ],
     contributors: topContributors,
-    recommended_action: `Prioritise ${topContributors[0]?.label ?? "the largest account"}`,
+    recommended_action: `Start with ${bestNext?.customer_name ?? "the largest account"} — best chance of recovery today`,
     action_kind: "send_reminder",
     requires_confirmation: true,
   };
@@ -645,4 +654,22 @@ export function getTopCustomers(limit = 6): Customer[] {
   return [...customers]
     .sort((a, b) => b.outstanding_cents - a.outstanding_cents)
     .slice(0, limit);
+}
+
+/* ------------------------------------------------------------------ */
+/* Workspace configuration                                             */
+/* ------------------------------------------------------------------ */
+
+export {
+  apiKeys,
+  auditLogs,
+  automationTemplates,
+  emailTemplates,
+  notificationPreferences,
+  reportDefinitions,
+  webhookEndpoints,
+} from "./workspace-data";
+
+export function getAutomation(automationId: string) {
+  return automations.find((a) => a.id === automationId);
 }

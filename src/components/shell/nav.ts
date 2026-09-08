@@ -39,7 +39,7 @@ export const SECONDARY_NAV: NavItem[] = [
 ];
 
 export const SUPPORT_NAV: NavItem[] = [
-  { title: "Help & support", href: "/settings/support", icon: LifeBuoy },
+  { title: "Help & support", href: "/help", icon: LifeBuoy },
 ];
 
 /** Five is the ceiling for a thumb-reachable bottom bar; the rest lives in More. */
