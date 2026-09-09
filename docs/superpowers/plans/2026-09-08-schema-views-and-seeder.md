@@ -54,7 +54,7 @@
 - Consumes: nothing
 - Produces: pytest fixtures `engine` (session-scoped, migrated database), `db` (function-scoped `Session`, rolled back after each test), and `workspace_id` (a `uuid.UUID` for a committed workspace row)
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `backend/tests/test_conftest_guard.py`:
 
@@ -79,12 +79,12 @@ def test_rejects_a_database_that_is_not_named_for_testing() -> None:
         assert_test_database("postgresql+psycopg://u:p@host/invoicepilot")
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd backend && pytest tests/test_conftest_guard.py -v`
 Expected: FAIL with `ImportError: cannot import name 'assert_test_database'`
 
-- [ ] **Step 3: Write `pytest.ini`**
+- [x] **Step 3: Write `pytest.ini`**
 
 Create `backend/pytest.ini`:
 
@@ -96,7 +96,7 @@ filterwarnings =
     error::DeprecationWarning
 ```
 
-- [ ] **Step 4: Write `conftest.py`**
+- [x] **Step 4: Write `conftest.py`**
 
 Create `backend/tests/conftest.py`:
 
@@ -188,12 +188,12 @@ def workspace_id(db: Session) -> uuid.UUID:
     return new_id
 ```
 
-- [ ] **Step 5: Run test to verify it passes**
+- [x] **Step 5: Run test to verify it passes**
 
 Run: `cd backend && pytest tests/test_conftest_guard.py -v`
 Expected: PASS, 2 passed
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add backend/pytest.ini backend/tests/conftest.py backend/tests/test_conftest_guard.py
@@ -212,7 +212,7 @@ git commit -m "test: add database test harness with a destructive-run guard"
 - Consumes: `Base`, `TimestampMixin`, `WorkspaceScoped` from `app.models.base`
 - Produces: `User`, `RefreshToken`, `WorkspaceMember` — importable from `app.models.auth`. `WorkspaceMember.role` is a `String(20)` holding one of `owner`/`admin`/`member`/`viewer`; `WorkspaceMember.status` holds `active` or `invited`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `backend/tests/test_models.py`:
 
@@ -244,12 +244,12 @@ def test_workspace_member_is_workspace_scoped() -> None:
     assert hasattr(WorkspaceMember, "role")
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd backend && pytest tests/test_models.py -v`
 Expected: FAIL with `ModuleNotFoundError: No module named 'app.models.auth'`
 
-- [ ] **Step 3: Write the models**
+- [x] **Step 3: Write the models**
 
 Create `backend/app/models/auth.py`:
 
@@ -345,12 +345,12 @@ class WorkspaceMember(WorkspaceScoped):
     user: Mapped[User | None] = relationship()
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `cd backend && pytest tests/test_models.py -v`
 Expected: PASS, 3 passed
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/app/models/auth.py backend/tests/test_models.py
@@ -369,7 +369,7 @@ git commit -m "feat: add user, refresh token and workspace member models"
 - Consumes: `WorkspaceScoped` from `app.models.base`
 - Produces: `CollectionEvent`, `CommunicationLog`, `AuditLog`, `EmailTemplate`, `ImportBatch`. `CommunicationLog.idempotency_key` is unique per workspace and is what makes a double-clicked send safe.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Append to `backend/tests/test_models.py`:
 
@@ -401,12 +401,12 @@ def test_activity_tables_are_workspace_scoped() -> None:
         assert hasattr(model, "workspace_id"), model.__name__
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd backend && pytest tests/test_models.py -v`
 Expected: FAIL with `ModuleNotFoundError: No module named 'app.models.activity'`
 
-- [ ] **Step 3: Write the models**
+- [x] **Step 3: Write the models**
 
 Create `backend/app/models/activity.py`:
 
@@ -562,12 +562,12 @@ class ImportBatch(WorkspaceScoped):
     rejections: Mapped[list | None] = mapped_column(JSONB)
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `cd backend && pytest tests/test_models.py -v`
 Expected: PASS, 5 passed
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/app/models/activity.py backend/tests/test_models.py
@@ -586,7 +586,7 @@ git commit -m "feat: add collection event, outbox, audit, template and import mo
 - Consumes: nothing new
 - Produces: `Invoice.balance_cents` as a real mapped column backed by `Computed`, selectable and sortable. `InvoiceStatus` without `overdue`. `Invoice.risk` no longer exists.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Append to `backend/tests/test_models.py`:
 
@@ -621,12 +621,12 @@ def test_invoice_does_not_store_risk() -> None:
     assert "risk" not in Invoice.__table__.c
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd backend && pytest tests/test_models.py -v`
 Expected: FAIL — `test_overdue_is_not_a_stored_status` fails on the `overdue` member still being present
 
-- [ ] **Step 3: Edit the model**
+- [x] **Step 3: Edit the model**
 
 In `backend/app/models/invoicing.py`, remove the `overdue` member from `InvoiceStatus`:
 
@@ -665,12 +665,12 @@ Add `Computed` to the `sqlalchemy` import list at the top of the file. In the `I
 
 Also delete the now-unused `RiskLevel` import usage in `Invoice`. Keep the `RiskLevel` enum class itself — the `customer_stats` view casts to it.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `cd backend && pytest tests/test_models.py -v`
 Expected: PASS, 8 passed
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/app/models/invoicing.py backend/tests/test_models.py
@@ -690,7 +690,7 @@ git commit -m "feat: make balance a generated column, drop overdue status and in
 - Consumes: the models from Tasks 2–4
 - Produces: a migrated database (revision id `"0002"`, `down_revision = "0001"`), and the row builders `make_customer(db, workspace_id, *, name, terms) -> UUID` and `make_invoice(db, workspace_id, customer_id, *, amount, paid, due_offset_days, issue_offset_days, paid_offset_days, status) -> UUID` in `tests/helpers.py`, used by every later test file.
 
-- [ ] **Step 1: Write the shared row builders**
+- [x] **Step 1: Write the shared row builders**
 
 Create `backend/tests/helpers.py`:
 
@@ -809,7 +809,7 @@ def utc(*, days_ago: int = 0) -> datetime:
     return datetime.now(timezone.utc) - timedelta(days=days_ago)
 ```
 
-- [ ] **Step 2: Write the failing test**
+- [x] **Step 2: Write the failing test**
 
 Create `backend/tests/test_migration_0002.py`:
 
@@ -960,12 +960,12 @@ def test_the_outbox_rejects_a_repeated_idempotency_key(
         )
 ```
 
-- [ ] **Step 3: Run test to verify it fails**
+- [x] **Step 3: Run test to verify it fails**
 
 Run: `cd backend && pytest tests/test_migration_0002.py -v`
 Expected: FAIL — `test_overdue_is_gone_from_the_invoice_status_enum` finds `overdue` still present, and the `users` tests fail with `relation "users" does not exist`
 
-- [ ] **Step 4: Write the migration**
+- [x] **Step 4: Write the migration**
 
 Create `backend/migrations/versions/0002_full_schema.py`:
 
@@ -1368,17 +1368,17 @@ def downgrade() -> None:
     _swap_status_enum(OLD_STATUSES, retired_value=None, fallback="sent")
 ```
 
-- [ ] **Step 5: Run test to verify it passes**
+- [x] **Step 5: Run test to verify it passes**
 
 Run: `cd backend && pytest tests/test_migration_0002.py tests/test_models.py -v`
 Expected: PASS, 6 migration tests and 8 model tests
 
-- [ ] **Step 6: Verify the migration reverses cleanly**
+- [x] **Step 6: Verify the migration reverses cleanly**
 
 Run: `cd backend && alembic upgrade head && alembic downgrade 0001 && alembic upgrade head`
 Expected: all three commands exit 0. A migration that cannot be reversed is one you cannot deploy twice.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add backend/migrations/versions/0002_full_schema.py backend/tests/helpers.py backend/tests/test_migration_0002.py
@@ -1397,7 +1397,7 @@ git commit -m "feat: add migration 0002 with auth, activity and invoice schema c
 - Consumes: `invoices` and `customers` as migration 0002 leaves them; `make_customer` and `make_invoice` from `tests/helpers.py`
 - Produces: view `invoice_state` — every column of `invoices`, plus `customer_name` (`TEXT`), `days_overdue` (`INTEGER`, negative before the due date) and `is_overdue` (`BOOLEAN`)
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `backend/tests/test_views.py`:
 
@@ -1501,12 +1501,12 @@ def test_a_partially_paid_late_invoice_is_overdue_for_its_balance(
     assert row.customer_name == "Partial Co"
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd backend && pytest tests/test_views.py -v`
 Expected: FAIL with `relation "invoice_state" does not exist`
 
-- [ ] **Step 3: Write the view**
+- [x] **Step 3: Write the view**
 
 Create `backend/migrations/versions/0003_derivation_views.py`:
 
@@ -1556,12 +1556,12 @@ def downgrade() -> None:
     op.execute("DROP VIEW IF EXISTS invoice_state")
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `cd backend && pytest tests/test_views.py -v`
 Expected: PASS, 5 passed
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/migrations/versions/0003_derivation_views.py backend/tests/test_views.py
@@ -1580,7 +1580,7 @@ git commit -m "feat: add invoice_state view deriving days_overdue and is_overdue
 - Consumes: `invoice_state`, `customers`
 - Produces: view `customer_stats` with `customer_id`, `workspace_id`, `outstanding_cents`, `overdue_cents`, `total_invoiced_cents`, `avg_days_to_pay`, `on_time_rate`, `open_invoice_count`, `oldest_open_days`, `risk` (`risk_level`), `risk_reason` (`TEXT`)
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Append to `backend/tests/test_views.py`:
 
@@ -1664,12 +1664,12 @@ def test_stats_never_return_null_for_a_customer_without_invoices(
         assert getattr(row, field) is not None, field
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd backend && pytest tests/test_views.py -v`
 Expected: FAIL with `relation "customer_stats" does not exist`
 
-- [ ] **Step 3: Add the view to migration 0003**
+- [x] **Step 3: Add the view to migration 0003**
 
 In `backend/migrations/versions/0003_derivation_views.py`, add the constant and execute it in `upgrade()` after `INVOICE_STATE`, and drop it first in `downgrade()`:
 
@@ -1757,12 +1757,12 @@ LEFT JOIN totals   t ON t.customer_id = c.id
 
 The CTEs aggregate across every workspace before the join. That is correct because customer ids are UUIDs and globally unique; the repository still applies the `workspace_id` filter on the way out.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `cd backend && pytest tests/test_views.py -v`
 Expected: PASS, 11 passed
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/migrations/versions/0003_derivation_views.py backend/tests/test_views.py
@@ -1781,7 +1781,7 @@ git commit -m "feat: add customer_stats view defining the risk rule in one place
 - Consumes: `invoice_state`, `customer_stats`
 - Produces: view `collection_queue` with `invoice_id`, `workspace_id`, `customer_id`, `number`, `customer_name`, `balance_cents`, `days_overdue`, `risk`, `recovery_score` — at most one row per customer, ordered by `recovery_score` descending within a workspace
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Append to `backend/tests/test_views.py`:
 
@@ -1830,12 +1830,12 @@ def test_recovery_score_decays_with_age(db: Session, workspace_id) -> None:
     assert [r.customer_name for r in rows] == ["Fresh", "Stale"]
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd backend && pytest tests/test_views.py -v`
 Expected: FAIL with `relation "collection_queue" does not exist`
 
-- [ ] **Step 3: Add the view**
+- [x] **Step 3: Add the view**
 
 Add to `backend/migrations/versions/0003_derivation_views.py`, executed after `CUSTOMER_STATS` and dropped before it in `downgrade()`:
 
@@ -1880,12 +1880,12 @@ def downgrade() -> None:
     op.execute("DROP VIEW IF EXISTS invoice_state")
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `cd backend && pytest tests/test_views.py -v`
 Expected: PASS, 14 passed
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/migrations/versions/0003_derivation_views.py backend/tests/test_views.py
@@ -1907,7 +1907,7 @@ git commit -m "feat: add collection_queue view ranking by expected recovery"
 
 **Why this task exists separately:** the seeder is only reproducible if the RNG matches JavaScript bit for bit. `Math.round` rounds half toward positive infinity; Python's `round` uses banker's rounding, so `round(2.5)` is `2` in Python and `3` in JS. Getting this wrong produces a plausible-looking ledger that does not match the frontend's.
 
-- [ ] **Step 1: Generate the reference values from the TypeScript**
+- [x] **Step 1: Generate the reference values from the TypeScript**
 
 Run from the repository root:
 
@@ -1921,7 +1921,7 @@ console.log(JSON.stringify([r(),r(),r(),r(),r()]));
 
 Copy the five printed values into the test below, replacing `REPLACE_WITH_NODE_OUTPUT`.
 
-- [ ] **Step 2: Write the failing test**
+- [x] **Step 2: Write the failing test**
 
 Create `backend/tests/test_rng.py`:
 
@@ -1954,12 +1954,12 @@ def test_js_round_rounds_half_upward_not_to_even() -> None:
     assert js_round(2.4) == 2
 ```
 
-- [ ] **Step 3: Run test to verify it fails**
+- [x] **Step 3: Run test to verify it fails**
 
 Run: `cd backend && pytest tests/test_rng.py -v`
 Expected: FAIL with `ModuleNotFoundError: No module named 'app.seeds'`
 
-- [ ] **Step 4: Write the RNG**
+- [x] **Step 4: Write the RNG**
 
 Create `backend/app/seeds/__init__.py` (empty file), then `backend/app/seeds/rng.py`:
 
@@ -2031,12 +2031,12 @@ class Rng:
         return math.floor(self.between(lo, hi + 1))
 ```
 
-- [ ] **Step 5: Run test to verify it passes**
+- [x] **Step 5: Run test to verify it passes**
 
 Run: `cd backend && pytest tests/test_rng.py -v`
 Expected: PASS, 2 passed
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add backend/app/seeds/ backend/tests/test_rng.py
@@ -2065,7 +2065,7 @@ git commit -m "feat: port the deterministic RNG from the frontend seed"
 5. `NOW` is `datetime(2026, 9, 8, 9, 12, tzinfo=timezone.utc)`. Dates stored in `DATE` columns are `.date()` of the computed datetime.
 6. Copy `CUSTOMER_SEEDS` (`seed.ts:166-207`, 40 rows) and `LINE_ITEMS` (`seed.ts:209-222`) verbatim as Python literals. They are data, not logic.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `backend/tests/test_ledger_invariants.py`:
 
@@ -2235,12 +2235,12 @@ def test_payments_reconcile_with_invoice_paid_amounts(seeded) -> None:
     assert mismatched == 0
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd backend && pytest tests/test_ledger_invariants.py -v`
 Expected: FAIL with `ModuleNotFoundError: No module named 'app.seeds.demo'`
 
-- [ ] **Step 3: Write the seeder**
+- [x] **Step 3: Write the seeder**
 
 Create `backend/app/seeds/demo.py`. Port `src/lib/data/seed.ts` following the porting rules above. The module structure:
 
@@ -2442,12 +2442,12 @@ It must create, in order: the workspace, the owner `User`, the owner
 the 40 customers, the 460 invoices with their items, the payments, and the
 collection events.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `cd backend && pytest tests/test_ledger_invariants.py -v`
 Expected: PASS, 8 passed
 
-- [ ] **Step 5: Write the CLI entry point**
+- [x] **Step 5: Write the CLI entry point**
 
 Create `backend/scripts/seed_demo.py`:
 
@@ -2494,12 +2494,12 @@ if __name__ == "__main__":
     raise SystemExit(main())
 ```
 
-- [ ] **Step 6: Run the full suite**
+- [x] **Step 6: Run the full suite**
 
 Run: `cd backend && pytest -v`
 Expected: PASS, all tests across all files
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add backend/app/seeds/demo.py backend/scripts/seed_demo.py backend/tests/test_ledger_invariants.py
@@ -2516,3 +2516,16 @@ git commit -m "feat: port the demo ledger seeder with its invariants as tests"
 - `SELECT * FROM collection_queue` returns one ranked row per overdue customer
 
 **Not in this plan:** anything that reads or writes over HTTP. Endpoints still return `501`. Plan 2 (auth) is next.
+
+---
+
+## Status: done (2026-09-09)
+
+All 10 tasks complete, 45/45 tests passing (38 from this plan + `test_conftest_guard.py`'s 2 + 5 pre-existing `test_security.py`) against a real Neon Postgres test database. Committed directly to `main` (user consent given), pushed to `origin/main`.
+
+Bugs found and fixed along the way, pre-existing and unrelated to this plan but blocking it (no migration had ever run against a real database before this):
+
+- **Migration 0001** double-created `invoice_status`/`risk_level`: explicit `.create(bind, checkfirst=True)` followed by reusing the same type object inside `op.create_table` issues an unconditional second `CREATE TYPE`. Fixed by setting `create_type = False` on both type objects after the explicit create.
+- **`alembic.ini`** was missing `path_separator = os`, which `pytest.ini`'s `error::DeprecationWarning` filter turned into a hard failure on every alembic invocation.
+- **`backend/requirements.txt`** pinned three package versions that never existed on PyPI (`dramatiq[redis]==1.19.1`, `redis==6.5.0`, `httpx==0.29.0`) — found while deploying to Vercel, not by this plan's tests. Repinned to the nearest real releases (1.18.0, 6.4.0, 0.28.1).
+- **`app/seeds/demo.py`** needed explicit `session.flush()` checkpoints between parent/child inserts (Workspace → User/Customer → Invoice → Payment/CollectionEvent): none of these models declare an ORM `relationship()` back to `Workspace`, only a bare `workspace_id` foreign-key column, so the unit of work has no signal to order cross-table INSERTs and a single trailing flush sent child rows before their parent.
