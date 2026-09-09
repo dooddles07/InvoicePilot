@@ -382,6 +382,9 @@ def downgrade() -> None:
     op.drop_column("invoices", "viewed_at")
     op.drop_column("invoices", "sent_at")
     op.drop_column("invoices", "balance_cents")
+    # Every row comes back 'low' -- the customer's actual risk history is not
+    # reconstructed here. That data loss on downgrade is intentional: risk is
+    # now a view computation, not a fact that was ever stored per invoice.
     op.add_column(
         "invoices",
         sa.Column(

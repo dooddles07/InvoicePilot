@@ -40,6 +40,12 @@ class InvoiceStatus(str, enum.Enum):
 
 
 class RiskLevel(str, enum.Enum):
+    """Not used by any mapped column -- risk lives only in customer_stats.
+
+    Kept so the `risk_level` Postgres enum that view casts to has a Python
+    counterpart to point at; nothing here writes a RiskLevel to a row.
+    """
+
     low = "low"
     medium = "medium"
     high = "high"

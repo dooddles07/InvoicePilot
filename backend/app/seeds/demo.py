@@ -351,6 +351,11 @@ def seed_demo_workspace(session: Session, *, owner_email: str) -> uuid.UUID:
                     invoice_id=invoice_id,
                     description=pool[i % len(pool)],
                     quantity=quantity,
+                    # amount_cents (share) is the number that must sum to the
+                    # invoice total -- that's the tested invariant. Integer
+                    # division here can leave unit_price_cents * quantity a
+                    # cent or two off share; that's fine, unit_price_cents is
+                    # cosmetic and nothing recomputes a line total from it.
                     unit_price_cents=share // quantity,
                     amount_cents=share,
                 )
