@@ -55,6 +55,10 @@ def upgrade() -> None:
     bind = op.get_bind()
     INVOICE_STATUS.create(bind, checkfirst=True)
     RISK_LEVEL.create(bind, checkfirst=True)
+    # Already created above. Without this, create_table's own DDL for these
+    # columns issues an unconditional second CREATE TYPE and fails.
+    INVOICE_STATUS.create_type = False
+    RISK_LEVEL.create_type = False
 
     op.create_table(
         "workspaces",
