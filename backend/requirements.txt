@@ -22,3 +22,6 @@ dramatiq[redis]==1.18.0
 ruff==0.15.1
 pytest==8.4.2
 httpx==0.28.1
+# Pinned: starlette 0.49's TestClient imports anyio.abc.BlockingPortal, which
+# anyio >= 4.11 deprecates -- and pytest.ini turns DeprecationWarning into an error.
+anyio==4.9.0

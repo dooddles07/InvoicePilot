@@ -31,8 +31,7 @@ class Settings(BaseSettings):
     database_url: PostgresDsn
     redis_url: RedisDsn
 
-    # Comma-separated origins allowed to call the API from a browser.
-    cors_origins: list[str] = Field(default_factory=lambda: ["http://localhost:3000"])
+    # (cors_origins removed: decision 7 -- FastAPI is private.)
 
     # Per-identity request ceiling, applied before authentication so an
     # unauthenticated flood cannot exhaust the pool.
