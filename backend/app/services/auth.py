@@ -231,3 +231,85 @@ class AuthService:
                 role=role,
             ),
         )
+    # --- rotating and ending a session ------------------------------------
+
+    def refresh(self, token: str) -> AuthResult:
+        row = self.session.scalar(
+            select(RefreshToken).where(
+                RefreshToken.token_hash == hash_refresh_token(token)
+            )
+        )
+        if row is None:
+            raise AuthenticationFailed()
+
+        if row.revoked_at is not None:
+            # Presented after it was retired: either a replay or a stolen
+            # token. Either way every session descended from it is suspect, so
+            # the whole chain goes.
+            self._revoke_chain(row)
+            self.session.commit()
+            raise AuthenticationFailed()
+
+        if row.expires_at <= datetime.now(timezone.utc):
+            raise AuthenticationFailed()
+
+        user = self.session.get(User, row.user_id)
+        if user is None:
+            raise AuthenticationFailed()
+        membership = self._active_membership(user.id)
+        if membership is None:
+            raise AuthenticationFailed()
+
+        workspace, role = membership
+        result = self._issue(user, workspace, role)
+
+        row.revoked_at = datetime.now(timezone.utc)
+        row.replaced_by_id = self.session.scalar(
+            select(RefreshToken.id).where(
+                RefreshToken.token_hash
+                == hash_refresh_token(result.tokens.refresh_token)
+            )
+        )
+        self.session.commit()
+        return result
+
+    def _revoke_chain(self, row: RefreshToken) -> None:
+        """Walk ``replaced_by_id`` forward and revoke everything it reaches."""
+
+        now = datetime.now(timezone.utc)
+        seen: set[uuid.UUID] = set()
+        current: RefreshToken | None = row
+        while current is not None and current.id not in seen:
+            seen.add(current.id)
+            current.revoked_at = current.revoked_at or now
+            next_id = current.replaced_by_id
+            current = self.session.get(RefreshToken, next_id) if next_id else None
+
+    def logout(self, token: str) -> None:
+        row = self.session.scalar(
+            select(RefreshToken).where(
+                RefreshToken.token_hash == hash_refresh_token(token)
+            )
+        )
+        # Signing out an already-dead session is not an error: the caller's
+        # intent -- be signed out -- is satisfied either way.
+        if row is not None and row.revoked_at is None:
+            row.revoked_at = datetime.now(timezone.utc)
+            self.session.commit()
+
+    def switch_workspace(
+        self, principal: Principal, workspace_id: uuid.UUID
+    ) -> AuthResult:
+        user = self.session.get(User, principal.user_id)
+        if user is None:
+            raise AuthenticationFailed()
+
+        membership = self._active_membership(user.id, workspace_id)
+        if membership is None:
+            # 404, not 403: a 403 would confirm the workspace exists.
+            raise NotFound("Workspace not found")
+
+        workspace, role = membership
+        result = self._issue(user, workspace, role)
+        self.session.commit()
+        return result

@@ -6,7 +6,7 @@ import pytest
 from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
-from app.core.errors import Conflict
+from app.core.errors import Conflict, NotFound
 from app.models.activity import EmailTemplate
 from app.models.auth import User, WorkspaceMember
 from app.schemas.auth import SignupRequest
@@ -159,3 +159,120 @@ def test_login_without_an_active_membership_fails(db: Session) -> None:
         AuthService(db).login(
             LoginRequest(email="ada@example.com", password="correct-horse-1")
         )
+
+
+from uuid import uuid4  # noqa: E402
+
+from app.core.security import decode_access_token, hash_refresh_token  # noqa: E402
+from app.models.auth import RefreshToken  # noqa: E402
+
+
+def _tokens(db: Session, email: str = "ada@example.com"):
+    return _signup(db, email).tokens
+
+
+def _row(db: Session, refresh_token: str) -> RefreshToken | None:
+    return db.scalar(
+        select(RefreshToken).where(
+            RefreshToken.token_hash == hash_refresh_token(refresh_token)
+        )
+    )
+
+
+def test_refresh_issues_a_new_pair_and_retires_the_old_one(db: Session) -> None:
+    first = _tokens(db)
+    second = AuthService(db).refresh(first.refresh_token).tokens
+
+    assert second.refresh_token != first.refresh_token
+    old = _row(db, first.refresh_token)
+    assert old is not None
+    assert old.revoked_at is not None
+    assert old.replaced_by_id is not None
+
+
+def test_reusing_a_refresh_token_kills_the_whole_chain(db: Session) -> None:
+    # A revoked token being presented means it leaked. Revoking only that row
+    # would leave the thief's newer token alive, which is the one that matters.
+    first = _tokens(db)
+    service = AuthService(db)
+    second = service.refresh(first.refresh_token).tokens
+    third = service.refresh(second.refresh_token).tokens
+
+    with pytest.raises(AuthenticationFailed):
+        service.refresh(first.refresh_token)
+
+    for token in (first, second, third):
+        row = _row(db, token.refresh_token)
+        assert row is not None and row.revoked_at is not None, token.refresh_token
+
+
+def test_an_unknown_refresh_token_is_rejected(db: Session) -> None:
+    with pytest.raises(AuthenticationFailed):
+        AuthService(db).refresh("not-a-real-token")
+
+
+def test_an_expired_refresh_token_is_rejected(db: Session) -> None:
+    tokens = _tokens(db)
+    db.execute(text("UPDATE refresh_tokens SET expires_at = now() - interval '1 day'"))
+    with pytest.raises(AuthenticationFailed):
+        AuthService(db).refresh(tokens.refresh_token)
+
+
+def test_logout_revokes_the_presented_token_only(db: Session) -> None:
+    tokens = _tokens(db)
+    other = _tokens(db, email="grace@example.com")
+    AuthService(db).logout(tokens.refresh_token)
+
+    mine = _row(db, tokens.refresh_token)
+    theirs = _row(db, other.refresh_token)
+    assert mine is not None and mine.revoked_at is not None
+    assert theirs is not None and theirs.revoked_at is None
+
+
+def test_logging_out_twice_is_not_an_error(db: Session) -> None:
+    # The Server Action clears cookies and calls this; a second click must not
+    # produce a 401 page for someone who is already signed out.
+    tokens = _tokens(db)
+    service = AuthService(db)
+    service.logout(tokens.refresh_token)
+    service.logout(tokens.refresh_token)
+
+
+def test_switching_to_a_workspace_you_do_not_belong_to_is_not_found(
+    db: Session,
+) -> None:
+    # 404 rather than 403: a 403 confirms that workspace id exists.
+    result = _signup(db)
+    principal = decode_access_token(result.tokens.access_token)
+    with pytest.raises(NotFound):
+        AuthService(db).switch_workspace(principal, uuid4())
+
+
+def test_switching_workspace_issues_a_token_for_the_new_scope(db: Session) -> None:
+    from app.models.auth import WorkspaceMember as Member
+    from app.models.invoicing import Workspace
+
+    result = _signup(db)
+    principal = decode_access_token(result.tokens.access_token)
+
+    other = Workspace(id=uuid4(), name="Client co", slug=f"client-{uuid4().hex[:6]}")
+    db.add(other)
+    # Flush the parent first: no ORM relationship() links these, so a single
+    # flush can send the member row before the workspace it references.
+    db.flush()
+    db.add(
+        Member(
+            id=uuid4(),
+            workspace_id=other.id,
+            user_id=principal.user_id,
+            role="viewer",
+            status="active",
+        )
+    )
+    db.flush()
+
+    switched = AuthService(db).switch_workspace(principal, other.id)
+    new_principal = decode_access_token(switched.tokens.access_token)
+    assert new_principal.workspace_id == other.id
+    # The role travels with the workspace: an owner elsewhere is a viewer here.
+    assert new_principal.role == "viewer"
