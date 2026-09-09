@@ -16,7 +16,7 @@ argon2-cffi==25.1.0
 
 # Background work and caching
 redis==6.5.0
-dramatiq[redis]==1.19.1
+dramatiq[redis]==1.18.0
 
 # Tooling
 ruff==0.15.1
