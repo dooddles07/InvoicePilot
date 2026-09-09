@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+import secrets
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Literal
@@ -106,3 +108,31 @@ def decode_access_token(token: str) -> Principal:
         workspace_id=UUID(claims["ws"]),
         role=claims["role"],
     )
+
+
+def generate_refresh_token() -> str:
+    """A refresh token is an opaque secret, not a JWT.
+
+    Nothing needs to read anything out of it -- the row in ``refresh_tokens``
+    holds the user, the expiry and the rotation chain -- so it carries no
+    claims to forge and no signature to verify.
+    """
+
+    return secrets.token_urlsafe(32)
+
+
+def hash_refresh_token(token: str) -> str:
+    """SHA-256, not argon2.
+
+    Deliberately different from ``hash_password``: this value is looked up on
+    every refresh, and a 300ms KDF on the hot path is a self-inflicted denial
+    of service. The token is 256 bits of urandom, so there is no dictionary to
+    attack.
+    """
+
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def refresh_expiry() -> datetime:
+    settings = get_settings()
+    return datetime.now(timezone.utc) + timedelta(days=settings.refresh_token_ttl_days)

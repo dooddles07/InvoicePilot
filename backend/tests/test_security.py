@@ -64,3 +64,36 @@ def test_owner_has_every_permission() -> None:
     owner = Principal(user_id=uuid4(), workspace_id=uuid4(), role="owner")
     for permission in ("invoice:write", "team:write", "apikey:write", "anything:at:all"):
         assert owner.can(permission)
+
+
+from datetime import datetime, timezone  # noqa: E402
+
+from app.core.security import (  # noqa: E402
+    generate_refresh_token,
+    hash_refresh_token,
+    refresh_expiry,
+)
+
+
+def test_refresh_tokens_are_unpredictable_and_unique() -> None:
+    tokens = {generate_refresh_token() for _ in range(100)}
+    assert len(tokens) == 100
+    # 32 bytes of urandom, base64url-encoded without padding.
+    assert all(len(token) == 43 for token in tokens)
+
+
+def test_the_hash_is_deterministic_and_hides_the_token() -> None:
+    # Stored hashed so a database disclosure hands over no live sessions.
+    token = generate_refresh_token()
+    digest = hash_refresh_token(token)
+    assert digest == hash_refresh_token(token)
+    assert len(digest) == 64
+    assert token not in digest
+
+
+def test_refresh_expiry_is_timezone_aware_and_in_the_future() -> None:
+    # A naive datetime compared against a timestamptz column is a silent
+    # offset bug, and the symptom is sessions that expire at the wrong hour.
+    expiry = refresh_expiry()
+    assert expiry.tzinfo is not None
+    assert expiry > datetime.now(timezone.utc)
