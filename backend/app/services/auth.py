@@ -313,3 +313,20 @@ class AuthService:
         result = self._issue(user, workspace, role)
         self.session.commit()
         return result
+
+    def describe(self, principal: Principal) -> SessionUser:
+        """Render a principal as the session the frontend renders a shell from."""
+
+        user = self.session.get(User, principal.user_id)
+        workspace = self.session.get(Workspace, principal.workspace_id)
+        if user is None or workspace is None:
+            raise AuthenticationFailed()
+        return SessionUser(
+            id=user.id,
+            email=user.email,
+            full_name=user.full_name,
+            avatar_url=user.avatar_url,
+            workspace_id=workspace.id,
+            workspace_name=workspace.name,
+            role=principal.role,
+        )

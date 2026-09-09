@@ -83,3 +83,18 @@ def test_switch_workspace_requires_a_bearer_token(client: TestClient) -> None:
 
 def test_password_reset_is_still_not_implemented(client: TestClient) -> None:
     assert client.post("/api/auth/password-reset", json={}).status_code == 501
+
+
+def test_me_returns_the_signed_in_user(client: TestClient) -> None:
+    created = client.post("/api/auth/signup", json=SIGNUP).json()
+    response = client.get(
+        "/api/users/me",
+        headers={"Authorization": f"Bearer {created['tokens']['access_token']}"},
+    )
+    assert response.status_code == 200
+    assert response.json()["email"] == SIGNUP["email"]
+    assert response.json()["workspace_id"] == created["user"]["workspace_id"]
+
+
+def test_me_without_a_token_is_401_or_403(client: TestClient) -> None:
+    assert client.get("/api/users/me").status_code in (401, 403)
