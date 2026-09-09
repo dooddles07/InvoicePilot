@@ -15,10 +15,10 @@ pyjwt==2.12.1
 argon2-cffi==25.1.0
 
 # Background work and caching
-redis==6.5.0
+redis==6.4.0
 dramatiq[redis]==1.18.0
 
 # Tooling
 ruff==0.15.1
 pytest==8.4.2
-httpx==0.29.0
+httpx==0.28.1
