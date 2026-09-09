@@ -22,7 +22,7 @@ def get_subscription(session: SessionDep, principal: PrincipalDep) -> None:
 @router.post("/subscription", status_code=status.HTTP_501_NOT_IMPLEMENTED)
 def create_subscription(
     session: SessionDep,
-    principal: Annotated[Principal, Depends(require("workspace:write"))],
+    principal: Annotated[Principal, Depends(require("billing:write"))],
 ) -> None:
     """Change plan"""
     raise HTTPException(

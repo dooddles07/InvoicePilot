@@ -3,7 +3,6 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes import (
     ai,
@@ -22,6 +21,7 @@ from app.api.routes import (
     workspaces,
 )
 from app.core.config import get_settings
+from app.core.errors import install_error_handlers
 
 settings = get_settings()
 
@@ -44,13 +44,10 @@ app = FastAPI(
     docs_url="/docs" if settings.environment != "production" else None,
 )
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.cors_origins,
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PATCH", "PUT", "DELETE"],
-    allow_headers=["Authorization", "Content-Type"],
-)
+# No CORS middleware: the browser never calls this service directly. Every
+# request arrives from the Next.js server with a bearer token. Adding CORS back
+# would mean re-opening a public browser-facing surface that has no CSRF story.
+install_error_handlers(app)
 
 for module in (
     auth,

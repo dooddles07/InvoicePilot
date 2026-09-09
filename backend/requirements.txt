@@ -3,6 +3,8 @@ fastapi==0.121.2
 uvicorn[standard]==0.41.0
 pydantic==2.13.1
 pydantic-settings==2.13.0
+# pydantic's EmailStr (auth schemas) needs this; it is not a transitive dep.
+email-validator==2.2.0
 python-multipart==0.0.20
 
 # Persistence
@@ -22,3 +24,6 @@ dramatiq[redis]==1.18.0
 ruff==0.15.1
 pytest==8.4.2
 httpx==0.28.1
+# Pinned: starlette 0.49's TestClient imports anyio.abc.BlockingPortal, which
+# anyio >= 4.11 deprecates -- and pytest.ini turns DeprecationWarning into an error.
+anyio==4.9.0

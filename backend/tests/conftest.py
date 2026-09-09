@@ -83,3 +83,24 @@ def workspace_id(db: Session) -> uuid.UUID:
     )
     db.flush()
     return new_id
+
+
+@pytest.fixture
+def client(db: Session) -> Iterator[TestClient]:
+    """The real app, with the request-scoped session replaced by the test one.
+
+    Without the override each request would open its own connection and commit
+    outside the test's transaction, so the rollback between tests would leave
+    rows behind.
+    """
+
+    from fastapi.testclient import TestClient
+
+    from app.api.deps import get_session
+    from app.main import app
+
+    app.dependency_overrides[get_session] = lambda: db
+    try:
+        yield TestClient(app, raise_server_exceptions=False)
+    finally:
+        app.dependency_overrides.clear()

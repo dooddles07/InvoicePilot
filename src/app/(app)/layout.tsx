@@ -4,17 +4,36 @@ import { TopBar, type Notification } from "@/components/shell/top-bar";
 import type { CommandTarget } from "@/components/shell/command-menu";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import {
-  currentUser,
   customers,
   getNeedsAttention,
   invoices,
   overdueInvoices,
-  workspace,
-  workspaces,
 } from "@/lib/data";
 import { money } from "@/lib/format";
+import { requireSession } from "@/lib/api/session";
+import type { Workspace } from "@/types";
 
-export default function AppLayout({ children }: LayoutProps<"/">) {
+export default async function AppLayout({ children }: LayoutProps<"/">) {
+  // The only unfaked data in this layout for now: who is signed in, and which
+  // workspace their token is scoped to. Everything below is still fixtures
+  // until plan 3 converts the read path.
+  const session = await requireSession();
+
+  const currentUser = {
+    id: session.id,
+    email: session.email,
+    full_name: session.full_name,
+    avatar_url: session.avatar_url,
+  };
+  // The switcher only reads id/name/plan; the rest of Workspace is not known
+  // from the session and not needed here.
+  const activeWorkspace = {
+    id: session.workspace_id,
+    name: session.workspace_name,
+    plan: "starter",
+  } as Workspace;
+  const workspaces = [activeWorkspace];
+
   // The shell is a Server Component: search targets and counts are computed
   // once here rather than shipping the whole ledger to the client.
   const commandInvoices: CommandTarget[] = invoices.slice(0, 40).map((i) => ({
@@ -44,7 +63,7 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
     <SidebarProvider>
       <AppSidebar
         workspaces={workspaces}
-        activeWorkspaceId={workspace.id}
+        activeWorkspaceId={activeWorkspace.id}
         user={currentUser}
         overdueCount={overdueInvoices.length}
       />

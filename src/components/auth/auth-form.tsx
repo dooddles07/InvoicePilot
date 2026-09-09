@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { login as loginAction, signup as signupAction } from "@/lib/actions/auth";
 
 const email = z.string().min(1, "Enter your work email.").email("That does not look like an email address.");
 
@@ -75,14 +76,35 @@ export function AuthForm({ mode }: { mode: Mode }) {
     { message?: string } | undefined
   >;
 
-  function onSubmit() {
+  async function onSubmit(values: Record<string, string>) {
     setPending(true);
-    window.setTimeout(() => {
+
+    if (mode === "reset") {
+      // Password reset needs the outbox, which arrives in plan 4. The copy
+      // already says "if that address has an account", so this stays honest.
       setPending(false);
       toast.success(copy.success, { description: copy.detail });
-      if (mode === "signup") router.push("/onboarding");
-      if (mode === "login") router.push("/dashboard");
-    }, 600);
+      return;
+    }
+
+    const result =
+      mode === "login" ? await loginAction(values) : await signupAction(values);
+    setPending(false);
+
+    if (!result.ok) {
+      // Shown against the field the backend blamed, so the person's eye lands
+      // on the input they have to change.
+      if (result.field) {
+        form.setError(result.field, { message: result.message });
+      } else {
+        toast.error("That did not work", { description: result.message });
+      }
+      return;
+    }
+
+    toast.success(copy.success, { description: copy.detail });
+    router.push(mode === "signup" ? "/onboarding" : "/dashboard");
+    router.refresh();
   }
 
   return (

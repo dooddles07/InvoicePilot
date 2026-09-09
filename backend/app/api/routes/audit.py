@@ -11,7 +11,10 @@ router = APIRouter(prefix="/audit", tags=["Audit"])
 
 
 @router.get("", status_code=status.HTTP_501_NOT_IMPLEMENTED)
-def get_root(session: SessionDep, principal: PrincipalDep) -> None:
+def get_root(
+    session: SessionDep,
+    principal: Annotated[Principal, Depends(require("audit:read"))],
+) -> None:
     """Audit log, filtered and paginated"""
     raise HTTPException(
         status_code=status.HTTP_501_NOT_IMPLEMENTED,
