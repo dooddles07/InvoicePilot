@@ -31,7 +31,8 @@ class Settings(BaseSettings):
     database_url: PostgresDsn
     redis_url: RedisDsn
 
-    # (cors_origins removed: decision 7 -- FastAPI is private.)
+    # (no browser-origin allowlist: decision 7 -- FastAPI is private, the
+    # Next.js server is its only caller.)
 
     # Per-identity request ceiling, applied before authentication so an
     # unauthenticated flood cannot exhaust the pool.
