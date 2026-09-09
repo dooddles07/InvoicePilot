@@ -1,8 +1,10 @@
 "use client";
 
 import { Check, ChevronsUpDown, Plus } from "lucide-react";
-import { useState } from "react";
+import { useTransition } from "react";
+import { toast } from "sonner";
 
+import { switchWorkspace } from "@/lib/actions/auth";
 import { LogoMark } from "@/components/invoicepilot/logo";
 import {
   DropdownMenu,
@@ -33,8 +35,18 @@ export function WorkspaceSwitcher({
   workspaces: Workspace[];
   activeId: string;
 }) {
-  const [selectedId, setSelectedId] = useState(activeId);
-  const active = workspaces.find((w) => w.id === selectedId) ?? workspaces[0]!;
+  const [pending, startTransition] = useTransition();
+  // No local selected-id state: the active workspace is whatever the access
+  // token says, so the server is the only thing that can change it.
+  const active = workspaces.find((w) => w.id === activeId) ?? workspaces[0]!;
+
+  function select(id: string) {
+    if (id === activeId) return;
+    startTransition(async () => {
+      const result = await switchWorkspace(id);
+      if (!result.ok) toast.error("Could not switch", { description: result.message });
+    });
+  }
 
   return (
     <SidebarMenu>
@@ -69,7 +81,8 @@ export function WorkspaceSwitcher({
             {workspaces.map((w) => (
               <DropdownMenuItem
                 key={w.id}
-                onClick={() => setSelectedId(w.id)}
+                onClick={() => select(w.id)}
+                disabled={pending}
                 className="gap-2"
               >
                 <LogoMark className="size-5 shrink-0" />
