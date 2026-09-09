@@ -61,7 +61,7 @@
 - Consumes: `Principal`, `ROLE_PERMISSIONS` from `app.core.security`
 - Produces: `ROLE_PERMISSIONS` covering every permission string the routes reference. No new functions.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `backend/tests/test_permissions.py`:
 
@@ -136,12 +136,12 @@ def test_every_permission_a_route_guards_is_in_the_matrix() -> None:
     assert unknown == set(), f"routes guard permissions nobody grants: {unknown}"
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd backend && pytest tests/test_permissions.py -v`
 Expected: FAIL — `integration:read`, `workspace:write`, `audit:read` and `billing:write` are in the matrix but in no role's grant list, and `test_every_permission_a_route_guards_is_in_the_matrix` reports `automation:read`/`automation:write` as unknown
 
-- [ ] **Step 3: Correct the table**
+- [x] **Step 3: Correct the table**
 
 In `backend/app/core/security.py`, replace `ROLE_PERMISSIONS` with:
 
@@ -194,7 +194,7 @@ Then add the two automation permissions to the test matrix so the reverse check 
     "automation:write": {"owner", "admin"},
 ```
 
-- [ ] **Step 4: Re-guard the routes**
+- [x] **Step 4: Re-guard the routes**
 
 In `backend/app/api/routes/billing.py`, the two write routes take `require("billing:write")` instead of `require("workspace:write")`, and the reads stay `PrincipalDep`:
 
@@ -221,12 +221,12 @@ In `backend/app/api/routes/workspaces.py`, the `PATCH` route takes `require("wor
 
 `users.py` `/me` and `notifications.py` stay on `PrincipalDep` — any authenticated principal, scoped to themselves.
 
-- [ ] **Step 5: Run test to verify it passes**
+- [x] **Step 5: Run test to verify it passes**
 
 Run: `cd backend && pytest tests/test_permissions.py tests/test_security.py -v`
 Expected: PASS, 66 permission assertions plus the existing security tests
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add backend/app/core/security.py backend/app/api/routes backend/tests/test_permissions.py
@@ -246,7 +246,7 @@ git commit -m "fix: grant the permissions the routes already guard and test the 
 - Consumes: nothing
 - Produces: `DomainError` and its subclasses `NotFound`, `PermissionDenied`, `AuthenticationFailed`, `ValidationFailed`, `Conflict` — each with a `status_code` class attribute and a `detail` argument — plus `install_error_handlers(app: FastAPI) -> None`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `backend/tests/test_errors.py`:
 
@@ -325,12 +325,12 @@ def test_authentication_failure_is_always_the_same_words(client: TestClient) -> 
     assert client.get("/boom/auth").json()["detail"] == "Invalid credentials"
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd backend && pytest tests/test_errors.py -v`
 Expected: FAIL with `ModuleNotFoundError: No module named 'app.core.errors'`
 
-- [ ] **Step 3: Write the errors module**
+- [x] **Step 3: Write the errors module**
 
 Create `backend/app/core/errors.py`:
 
@@ -423,7 +423,7 @@ def install_error_handlers(app: FastAPI) -> None:
         )
 ```
 
-- [ ] **Step 4: Register the handlers and delete CORS**
+- [x] **Step 4: Register the handlers and delete CORS**
 
 In `backend/app/main.py`, delete the `from fastapi.middleware.cors import CORSMiddleware` import and the whole `app.add_middleware(CORSMiddleware, ...)` block, and add after the `app = FastAPI(...)` call:
 
@@ -444,12 +444,12 @@ Then delete `cors_origins` from `backend/app/core/config.py`:
 
 and remove any `CORS_ORIGINS` line from `backend/.env.example` if one exists.
 
-- [ ] **Step 5: Run test to verify it passes**
+- [x] **Step 5: Run test to verify it passes**
 
 Run: `cd backend && pytest tests/test_errors.py -v && python -c "from app.main import app; print(len(app.user_middleware), 'middlewares')"`
 Expected: PASS, 8 tests; the import prints `0 middlewares`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add backend/app/core/errors.py backend/app/main.py backend/app/core/config.py backend/tests/test_errors.py
@@ -468,7 +468,7 @@ git commit -m "feat: add domain errors with one handler, delete CORS"
 - Consumes: `get_settings` from `app.core.config`
 - Produces: `generate_refresh_token() -> str` (43-char URL-safe secret), `hash_refresh_token(token: str) -> str` (64-char hex), `refresh_expiry() -> datetime` (timezone-aware, `refresh_token_ttl_days` ahead)
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Append to `backend/tests/test_security.py`:
 
@@ -506,12 +506,12 @@ def test_refresh_expiry_is_timezone_aware_and_in_the_future() -> None:
     assert expiry > datetime.now(timezone.utc)
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd backend && pytest tests/test_security.py -v`
 Expected: FAIL with `ImportError: cannot import name 'generate_refresh_token'`
 
-- [ ] **Step 3: Write the primitives**
+- [x] **Step 3: Write the primitives**
 
 Append to `backend/app/core/security.py`:
 
@@ -546,12 +546,12 @@ def refresh_expiry() -> datetime:
 
 Add `import hashlib` and `import secrets` to the imports at the top of the file.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `cd backend && pytest tests/test_security.py -v`
 Expected: PASS, existing tests plus 3 new
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/app/core/security.py backend/tests/test_security.py
@@ -577,7 +577,7 @@ git commit -m "feat: add refresh token generation, hashing and expiry"
   - `LoginRequest`: `email: EmailStr`, `password: str`
   - `AuthService(session: Session)` with `signup(request: SignupRequest) -> AuthResult`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `backend/tests/test_auth_service.py`:
 
@@ -675,12 +675,12 @@ def test_the_workspace_slug_is_unique_across_signups(db: Session) -> None:
     assert all(slug.startswith("ada-s-workspace-") for slug in slugs)
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd backend && pytest tests/test_auth_service.py -v`
 Expected: FAIL with `ModuleNotFoundError: No module named 'app.schemas.auth'`
 
-- [ ] **Step 3: Write the schemas**
+- [x] **Step 3: Write the schemas**
 
 Create `backend/app/schemas/auth.py`:
 
@@ -743,7 +743,7 @@ class AuthResult(BaseModel):
     user: SessionUser
 ```
 
-- [ ] **Step 4: Write the service**
+- [x] **Step 4: Write the service**
 
 Create `backend/app/services/auth.py`:
 
@@ -924,12 +924,12 @@ class AuthService:
         )
 ```
 
-- [ ] **Step 5: Run test to verify it passes**
+- [x] **Step 5: Run test to verify it passes**
 
 Run: `cd backend && pytest tests/test_auth_service.py -v`
 Expected: PASS, 6 tests
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add backend/app/schemas/auth.py backend/app/services/auth.py backend/tests/test_auth_service.py
@@ -948,7 +948,7 @@ git commit -m "feat: add signup creating a user, workspace, owner membership and
 - Consumes: `LoginRequest`, `AuthenticationFailed`, `verify_password`
 - Produces: `AuthService.login(request: LoginRequest) -> AuthResult`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Append to `backend/tests/test_auth_service.py`:
 
@@ -1023,12 +1023,12 @@ def test_login_without_an_active_membership_fails(db: Session) -> None:
         )
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd backend && pytest tests/test_auth_service.py -v`
 Expected: FAIL with `AttributeError: 'AuthService' object has no attribute 'login'`
 
-- [ ] **Step 3: Write login**
+- [x] **Step 3: Write login**
 
 Append to the `AuthService` class in `backend/app/services/auth.py`:
 
@@ -1086,12 +1086,12 @@ Append to the `AuthService` class in `backend/app/services/auth.py`:
         return row[0], row[1]
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `cd backend && pytest tests/test_auth_service.py -v`
 Expected: PASS, 11 tests
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/app/services/auth.py backend/tests/test_auth_service.py
@@ -1110,7 +1110,7 @@ git commit -m "feat: add login with a uniform failure for unknown emails"
 - Consumes: `RefreshToken`, `hash_refresh_token`
 - Produces: `AuthService.refresh(token: str) -> AuthResult`, `AuthService.logout(token: str) -> None`, `AuthService.switch_workspace(principal: Principal, workspace_id: UUID) -> AuthResult`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Append to `backend/tests/test_auth_service.py`:
 
@@ -1231,12 +1231,12 @@ def test_switching_workspace_issues_a_token_for_the_new_scope(db: Session) -> No
 
 Add `NotFound` to the `from app.core.errors import ...` line at the top of the file.
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd backend && pytest tests/test_auth_service.py -v`
 Expected: FAIL with `AttributeError: 'AuthService' object has no attribute 'refresh'`
 
-- [ ] **Step 3: Write rotation, logout and switching**
+- [x] **Step 3: Write rotation, logout and switching**
 
 Append to the `AuthService` class in `backend/app/services/auth.py`:
 
@@ -1325,12 +1325,12 @@ Append to the `AuthService` class in `backend/app/services/auth.py`:
         return result
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `cd backend && pytest tests/test_auth_service.py -v`
 Expected: PASS, 19 tests
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/app/services/auth.py backend/tests/test_auth_service.py
@@ -1349,7 +1349,7 @@ git commit -m "feat: add single-use refresh rotation, chain revocation and works
 - Consumes: `AuthService`, the schemas from Task 4, `SessionDep` and `PrincipalDep` from `app.api.deps`
 - Produces: `POST /api/auth/signup` → `201 AuthResult`; `POST /api/auth/login` → `200 AuthResult`; `POST /api/auth/refresh` → `200 AuthResult`; `POST /api/auth/logout` → `204`; `POST /api/auth/switch-workspace` → `200 AuthResult`. `POST /api/auth/password-reset` stays `501`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `backend/tests/test_auth_routes.py`:
 
@@ -1465,12 +1465,12 @@ def client(db: Session) -> Iterator[TestClient]:
         app.dependency_overrides.clear()
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd backend && pytest tests/test_auth_routes.py -v`
 Expected: FAIL — every endpoint answers `501`
 
-- [ ] **Step 3: Write the routes**
+- [x] **Step 3: Write the routes**
 
 Replace `backend/app/api/routes/auth.py` with:
 
@@ -1540,12 +1540,12 @@ def create_password_reset() -> None:
     )
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `cd backend && pytest -v`
 Expected: PASS, the whole backend suite including the 7 new route tests
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/app/api/routes/auth.py backend/tests/test_auth_routes.py backend/tests/conftest.py
@@ -1590,7 +1590,7 @@ npm run dev
   - `apiFetch<T>(path: string, options: { method?: string; body?: unknown; schema: ZodType<T>; token?: string | null }) => Promise<T>` — throws `ApiError` with a `status` field
   - `ApiError extends Error` with `status: number` and `detail: string`
 
-- [ ] **Step 1: Write the cookie module**
+- [x] **Step 1: Write the cookie module**
 
 Create `src/lib/auth/cookies.ts`:
 
@@ -1653,7 +1653,7 @@ export async function readRefreshToken(): Promise<string | null> {
 }
 ```
 
-- [ ] **Step 2: Write the client**
+- [x] **Step 2: Write the client**
 
 Create `src/lib/api/client.ts`:
 
@@ -1750,7 +1750,7 @@ export function handleReadError(error: unknown): never {
 }
 ```
 
-- [ ] **Step 3: Point the app at the backend**
+- [x] **Step 3: Point the app at the backend**
 
 Create `.env.local` (git-ignored) with:
 
@@ -1765,12 +1765,12 @@ and add the same line, without a value, to a new `.env.example`:
 API_BASE_URL=
 ```
 
-- [ ] **Step 4: Verify it type-checks**
+- [x] **Step 4: Verify it type-checks**
 
 Run: `npx tsc --noEmit`
 Expected: exits 0. If `server-only` is missing, run `npm install server-only` first and re-run.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/lib/auth/cookies.ts src/lib/api/client.ts .env.example package.json package-lock.json
@@ -1788,7 +1788,7 @@ git commit -m "feat: add the session cookie contract and the FastAPI client"
 - Consumes: `apiFetch`, `ApiError`, `readAccessToken`
 - Produces: `sessionUserSchema` (Zod), `type SessionUser`, `getSession(): Promise<SessionUser | null>` (React-`cache()`d), `requireSession(): Promise<SessionUser>` (redirects to `/login` when absent)
 
-- [ ] **Step 1: Write the module**
+- [x] **Step 1: Write the module**
 
 Create `src/lib/api/session.ts`:
 
@@ -1843,7 +1843,7 @@ export async function requireSession(): Promise<SessionUser> {
 }
 ```
 
-- [ ] **Step 2: Make `/users/me` return a session user**
+- [x] **Step 2: Make `/users/me` return a session user**
 
 `getSession` calls `GET /api/users/me`, which is still `501`. In
 `backend/app/api/routes/users.py`, replace the `/me` route with:
@@ -1878,7 +1878,7 @@ adding `from app.schemas.auth import SessionUser` and
         )
 ```
 
-- [ ] **Step 3: Cover the new endpoint**
+- [x] **Step 3: Cover the new endpoint**
 
 Append to `backend/tests/test_auth_routes.py`:
 
@@ -1898,12 +1898,12 @@ def test_me_without_a_token_is_401_or_403(client: TestClient) -> None:
     assert client.get("/api/users/me").status_code in (401, 403)
 ```
 
-- [ ] **Step 4: Run the checks**
+- [x] **Step 4: Run the checks**
 
 Run: `cd backend && pytest tests/test_auth_routes.py -v` then `npx tsc --noEmit` from the repository root
 Expected: pytest PASS (9 tests); `tsc` exits 0
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/lib/api/session.ts backend/app/api/routes/users.py backend/app/services/auth.py backend/tests/test_auth_routes.py
@@ -1925,7 +1925,7 @@ Read `node_modules/next/dist/docs/01-app/03-api-reference/03-file-conventions/pr
 before editing. In Next 16 the file is `proxy.ts`, not `middleware.ts`, and it
 lives beside `app/` — so `src/proxy.ts` in this repository.
 
-- [ ] **Step 1: Write the proxy**
+- [x] **Step 1: Write the proxy**
 
 Create `src/proxy.ts`:
 
@@ -2058,7 +2058,7 @@ export const config = {
 };
 ```
 
-- [ ] **Step 2: Verify the redirect for a signed-out visitor**
+- [x] **Step 2: Verify the redirect for a signed-out visitor**
 
 Run, with both servers up:
 
@@ -2068,12 +2068,12 @@ curl -s -o /dev/null -w "%{http_code} %{redirect_url}\n" http://localhost:3000/d
 
 Expected: `307 http://localhost:3000/login?next=%2Fdashboard`
 
-- [ ] **Step 3: Verify a marketing page is untouched**
+- [x] **Step 3: Verify a marketing page is untouched**
 
 Run: `curl -s -o /dev/null -w "%{http_code}\n" http://localhost:3000/pricing`
 Expected: `200`
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/proxy.ts
@@ -2092,7 +2092,7 @@ git commit -m "feat: add proxy with the optimistic session check and refresh rot
 - Consumes: `apiFetch`, `ApiError`, `setSessionCookies`, `clearSessionCookies`, `sessionUserSchema`
 - Produces: `type ActionResult = { ok: true } | { ok: false; message: string; field?: string }`, and the actions `login(input)`, `signup(input)`, `logout()`, `switchWorkspace(workspaceId)` — each returning `ActionResult`, none throwing on an expected failure
 
-- [ ] **Step 1: Write the actions**
+- [x] **Step 1: Write the actions**
 
 Create `src/lib/actions/auth.ts`:
 
@@ -2242,7 +2242,7 @@ export async function switchWorkspace(workspaceId: string): Promise<ActionResult
 }
 ```
 
-- [ ] **Step 2: Convert the form**
+- [x] **Step 2: Convert the form**
 
 In `src/components/auth/auth-form.tsx`, add the imports:
 
@@ -2288,7 +2288,7 @@ and replace the whole `onSubmit` function (currently the `setTimeout` block) wit
 The `handleSubmit(onSubmit)` call already passes the form values, so no other
 change to the JSX is needed.
 
-- [ ] **Step 3: Verify the round trip by hand**
+- [x] **Step 3: Verify the round trip by hand**
 
 With both servers up and a migrated database:
 
@@ -2306,17 +2306,17 @@ Then in a browser: visit `http://localhost:3000/login`, sign in as
 wrong password and confirm the message appears under the password field rather
 than as a full-page error.
 
-- [ ] **Step 4: Verify the cookies are unreadable from the page**
+- [x] **Step 4: Verify the cookies are unreadable from the page**
 
 In the browser console on `/dashboard`, run `document.cookie`.
 Expected: neither `ip_at` nor `ip_rt` appears — both are httpOnly.
 
-- [ ] **Step 5: Run the static checks**
+- [x] **Step 5: Run the static checks**
 
 Run: `npx tsc --noEmit && npm run lint`
 Expected: both exit 0
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/lib/actions/auth.ts src/components/auth/auth-form.tsx
@@ -2339,7 +2339,7 @@ The invoice, customer and notification props in this layout stay on fixtures —
 they belong to plan 3. This task changes **only** who is signed in and which
 workspace is active.
 
-- [ ] **Step 1: Give the layout a real session**
+- [x] **Step 1: Give the layout a real session**
 
 In `src/app/(app)/layout.tsx`, add:
 
@@ -2374,7 +2374,7 @@ passed into `TopBar` and `AppSidebar` with values derived from `session`:
 and drop `currentUser` and `workspace` from the `@/lib/data` import list, keeping
 the rest.
 
-- [ ] **Step 2: Wire the switcher to the action**
+- [x] **Step 2: Wire the switcher to the action**
 
 In `src/components/shell/workspace-switcher.tsx`, replace the `useState`
 selection with a transition that calls the action, because switching workspace
@@ -2422,7 +2422,7 @@ and in the dropdown items:
 
 with the `Check` comparison left as it is.
 
-- [ ] **Step 3: Verify the shell**
+- [x] **Step 3: Verify the shell**
 
 With both servers up: sign in, and confirm the sidebar shows the workspace name
 that signup generated (`Ada's workspace`) and the top bar shows `Ada Lovelace`,
@@ -2431,12 +2431,12 @@ neither of which appears anywhere in `src/lib/data/`.
 Then delete the `ip_at` and `ip_rt` cookies in devtools and reload `/dashboard`.
 Expected: redirected to `/login?next=%2Fdashboard`.
 
-- [ ] **Step 4: Run the static checks**
+- [x] **Step 4: Run the static checks**
 
 Run: `npx tsc --noEmit && npm run lint`
 Expected: both exit 0
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add "src/app/(app)/layout.tsx" src/components/shell/workspace-switcher.tsx
@@ -2462,3 +2462,71 @@ git commit -m "feat: render the app shell from the real session"
 **Not in this plan:** every screen still renders its numbers from
 `src/lib/data/`. Converting the read path — invoices, customers, collections,
 payments, reports — is plan 3. Password reset waits for the outbox in plan 4.
+
+---
+
+## Status: done (2026-09-09)
+
+All 12 tasks complete. Backend: **149/149 tests passing** against a real Neon
+Postgres test database (66 permission assertions, 8 error-map tests, 3 refresh
+primitives, 19 auth-service tests, 11 auth-route tests, plus everything plan 1
+left green). Frontend: `npx tsc --noEmit` exits 0; `npm run lint` exits 0 (two
+`react-hooks/set-state-in-effect` errors remain in `src/hooks/use-mobile.ts`
+and a dropdown component — both pre-existing on `main`, untouched here).
+Merged to `main` via `--no-ff` (commit `c47e456`, user consent given) and
+pushed to `origin/main`.
+
+### Not verified in-session
+
+No `uvicorn` in the environment and no headless browser, so the live
+two-server checks in Tasks 10–12 were run only as far as the tooling allowed:
+`proxy.ts` redirects were confirmed with `curl` against `next dev`
+(`/dashboard` → `307 /login?next=%2Fdashboard`, `/pricing` → `200`), and the
+changed routes were confirmed to compile and serve. The signed-in round trip
+(`curl` signup, browser login, `document.cookie` empty, workspace switch) was
+not executed. The backend side of those flows is covered by
+`test_auth_routes.py` driving the real ASGI app.
+
+### Deviations from the plan as written
+
+- **`backend/requirements.txt` — two pins added.** `anyio==4.9.0`: starlette
+  0.49's `TestClient` imports `anyio.abc.BlockingPortal`, which `anyio >= 4.11`
+  deprecates, and `pytest.ini`'s `error::DeprecationWarning` turns that into a
+  collection failure — so Tasks 2, 7 and 9 could not import `TestClient` until
+  it was pinned down. `email-validator==2.2.0`: pydantic's `EmailStr` (used
+  throughout `app/schemas/auth.py`) needs it and it is not a transitive
+  dependency. The environment had neither installed.
+
+- **`signup()` and two test bodies gained `session.flush()` checkpoints.**
+  `User`/`Workspace`/`WorkspaceMember`/`EmailTemplate` declare no ORM
+  `relationship()` back to `Workspace` — only a bare `workspace_id` FK column —
+  so the unit of work cannot order the cross-table INSERTs and a single flush
+  sent child rows before their parent (`ForeignKeyViolation`). Flushing the
+  parent before adding its children fixes it. This is the same defect, and the
+  same fix, that `app/seeds/demo.py` already carries and documents from plan 1;
+  the plan's `signup()` code and its
+  `test_switching_workspace_issues_a_token_for_the_new_scope` /
+  (Task 6) test bodies omitted the checkpoint.
+
+- **`app/core/config.py` CORS comment reworded.** Task 2 Step 4 says to leave
+  the marker `# (cors_origins removed: decision 7 ...)`, but the "Done when"
+  list greps `backend/` for `cors_origins` and expects nothing — the marker
+  tripped its own gate. Reworded to "no browser-origin allowlist: decision 7
+  ...", same intent, no matching token.
+
+- **`.env.example` (repo root and `backend/`) is disk-only.** This repo's
+  `.gitignore` matches `.env*`, so the `git add .env.example` steps in Tasks 2
+  and 8 cannot land a tracked file. The lines were written to disk for local
+  use and left untracked.
+
+- **Task 12 — the workspace switcher's list is `[session workspace]`.** The
+  plan keeps `workspaces` imported from `@/lib/data` and passes the fixture
+  list to `WorkspaceSwitcher`. Its fixture IDs never match the id inside the
+  real access token, so `workspaces.find(w => w.id === activeId)` would always
+  miss and the sidebar would show a fixture name. The layout now builds a
+  one-element list from `session.workspace_id` / `session.workspace_name`
+  (cast to `Workspace` — the switcher only reads `id`/`name`/`plan`). A real
+  multi-workspace list arrives when the read path is converted in plan 3.
+
+- **`pytest` is 9.1.1, not the pinned 8.4.2.** Pre-existing in the
+  environment; left as-is since the suite is green on it.
