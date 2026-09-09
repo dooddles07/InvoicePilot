@@ -116,11 +116,44 @@ LEFT JOIN totals   t ON t.customer_id = c.id
 """
 
 
+COLLECTION_QUEUE = """
+CREATE VIEW collection_queue AS
+SELECT *
+FROM (
+    SELECT DISTINCT ON (i.workspace_id, i.customer_id)
+        i.id                AS invoice_id,
+        i.workspace_id,
+        i.customer_id,
+        i.number,
+        i.customer_name,
+        i.balance_cents,
+        i.days_overdue,
+        cs.risk,
+        (
+            i.balance_cents
+            * CASE cs.risk
+                WHEN 'high'   THEN 2.4
+                WHEN 'medium' THEN 1.6
+                ELSE 1.0
+              END
+            * EXP(-i.days_overdue / 55.0)
+        ) AS recovery_score
+    FROM invoice_state i
+    JOIN customer_stats cs ON cs.customer_id = i.customer_id
+    WHERE i.is_overdue
+    ORDER BY i.workspace_id, i.customer_id, recovery_score DESC
+) q
+ORDER BY q.workspace_id, q.recovery_score DESC
+"""
+
+
 def upgrade() -> None:
     op.execute(INVOICE_STATE)
     op.execute(CUSTOMER_STATS)
+    op.execute(COLLECTION_QUEUE)
 
 
 def downgrade() -> None:
+    op.execute("DROP VIEW IF EXISTS collection_queue")
     op.execute("DROP VIEW IF EXISTS customer_stats")
     op.execute("DROP VIEW IF EXISTS invoice_state")

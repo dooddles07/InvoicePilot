@@ -174,3 +174,47 @@ def test_stats_never_return_null_for_a_customer_without_invoices(
         "oldest_open_days",
     ):
         assert getattr(row, field) is not None, field
+
+
+def test_queue_keeps_one_invoice_per_customer(db: Session, workspace_id) -> None:
+    # You chase a customer, not an invoice. Three rows for one account turns a
+    # work queue into a list.
+    customer_id = make_customer(db, workspace_id, name="Repeat")
+    make_invoice(db, workspace_id, customer_id, amount=100_000, due_offset_days=-10)
+    make_invoice(db, workspace_id, customer_id, amount=20_000, due_offset_days=-12)
+
+    rows = db.execute(
+        text("SELECT * FROM collection_queue WHERE workspace_id = :ws"),
+        {"ws": workspace_id},
+    ).all()
+    assert len(rows) == 1
+    assert rows[0].balance_cents == 100_000
+
+
+def test_queue_excludes_invoices_that_are_not_overdue(db: Session, workspace_id) -> None:
+    customer_id = make_customer(db, workspace_id, name="Current")
+    make_invoice(db, workspace_id, customer_id, amount=100_000, due_offset_days=14)
+
+    rows = db.execute(
+        text("SELECT * FROM collection_queue WHERE workspace_id = :ws"),
+        {"ws": workspace_id},
+    ).all()
+    assert rows == []
+
+
+def test_recovery_score_decays_with_age(db: Session, workspace_id) -> None:
+    # A big balance dead for 200 days is worth less of your morning than a
+    # smaller one that just slipped, so the queue must not rank on value alone.
+    fresh = make_customer(db, workspace_id, name="Fresh")
+    stale = make_customer(db, workspace_id, name="Stale")
+    make_invoice(db, workspace_id, fresh, amount=100_000, due_offset_days=-5)
+    make_invoice(db, workspace_id, stale, amount=150_000, due_offset_days=-200)
+
+    rows = db.execute(
+        text(
+            "SELECT customer_name, recovery_score FROM collection_queue "
+            "WHERE workspace_id = :ws ORDER BY recovery_score DESC"
+        ),
+        {"ws": workspace_id},
+    ).all()
+    assert [r.customer_name for r in rows] == ["Fresh", "Stale"]
