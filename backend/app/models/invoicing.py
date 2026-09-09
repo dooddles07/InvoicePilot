@@ -6,6 +6,7 @@ from datetime import date, datetime
 
 from sqlalchemy import (
     BigInteger,
+    Computed,
     Date,
     DateTime,
     Enum,
@@ -23,12 +24,18 @@ from app.models.base import Base, TimestampMixin, WorkspaceScoped
 
 
 class InvoiceStatus(str, enum.Enum):
+    """Lifecycle only.
+
+    ``overdue`` is deliberately absent: it is a function of ``due_date`` and
+    ``balance_cents`` against today, so storing it would mean a row silently
+    becoming wrong at midnight.
+    """
+
     draft = "draft"
     sent = "sent"
     viewed = "viewed"
     partially_paid = "partially_paid"
     paid = "paid"
-    overdue = "overdue"
     disputed = "disputed"
 
 
@@ -85,9 +92,6 @@ class Invoice(WorkspaceScoped):
     status: Mapped[InvoiceStatus] = mapped_column(
         Enum(InvoiceStatus, name="invoice_status"), nullable=False, default=InvoiceStatus.draft
     )
-    risk: Mapped[RiskLevel] = mapped_column(
-        Enum(RiskLevel, name="risk_level"), nullable=False, default=RiskLevel.low
-    )
 
     # Money is integer minor units. Float dollars do not survive arithmetic, and
     # a rounding error in an accounts receivable ledger is a support ticket that
@@ -103,14 +107,22 @@ class Invoice(WorkspaceScoped):
     notes: Mapped[str | None] = mapped_column(Text)
     last_contacted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
+    # Generated rather than computed in Python: the collections queue orders by
+    # expected recovery, which multiplies this value inside SQL. A property
+    # cannot be selected, sorted or indexed.
+    balance_cents: Mapped[int] = mapped_column(
+        BigInteger,
+        Computed("GREATEST(amount_cents - paid_cents, 0)", persisted=True),
+        nullable=False,
+    )
+
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    viewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
     customer: Mapped[Customer] = relationship(back_populates="invoices")
     items: Mapped[list["InvoiceItem"]] = relationship(
         back_populates="invoice", cascade="all, delete-orphan"
     )
-
-    @property
-    def balance_cents(self) -> int:
-        return max(self.amount_cents - self.paid_cents, 0)
 
 
 class InvoiceItem(WorkspaceScoped):

@@ -10,6 +10,9 @@ from app.models.activity import (
     EmailTemplate,
     ImportBatch,
 )
+from sqlalchemy import Computed
+
+from app.models.invoicing import Invoice, InvoiceStatus
 
 
 def test_user_is_not_workspace_scoped() -> None:
@@ -48,3 +51,28 @@ def test_activity_tables_are_workspace_scoped() -> None:
         ImportBatch,
     ):
         assert hasattr(model, "workspace_id"), model.__name__
+
+
+def test_overdue_is_not_a_stored_status() -> None:
+    # Overdue is time-derived. Storing it means a row goes stale at midnight.
+    assert not hasattr(InvoiceStatus, "overdue")
+    assert {s.value for s in InvoiceStatus} == {
+        "draft",
+        "sent",
+        "viewed",
+        "partially_paid",
+        "paid",
+        "disputed",
+    }
+
+
+def test_balance_is_a_generated_column_not_a_property() -> None:
+    # The collections ranking sorts on balance in SQL, which a Python property
+    # cannot do.
+    column = Invoice.__table__.c.balance_cents
+    assert isinstance(column.server_default, Computed)
+
+
+def test_invoice_does_not_store_risk() -> None:
+    # Risk is the customer's grade, defined once in the customer_stats view.
+    assert "risk" not in Invoice.__table__.c
