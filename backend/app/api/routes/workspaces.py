@@ -40,7 +40,7 @@ def get_root_2(session: SessionDep, principal: PrincipalDep) -> None:
 @router.patch("/{workspace_id}", status_code=status.HTTP_501_NOT_IMPLEMENTED)
 def update_root(
     session: SessionDep,
-    principal: Annotated[Principal, Depends(require("team:write"))],
+    principal: Annotated[Principal, Depends(require("workspace:write"))],
 ) -> None:
     """Update workspace settings"""
     raise HTTPException(

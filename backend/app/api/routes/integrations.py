@@ -13,7 +13,7 @@ router = APIRouter(prefix="/integrations", tags=["Integrations"])
 @router.get("", status_code=status.HTTP_501_NOT_IMPLEMENTED)
 def get_root(
     session: SessionDep,
-    principal: Annotated[Principal, Depends(require("integration:write"))],
+    principal: Annotated[Principal, Depends(require("integration:read"))],
 ) -> None:
     """Connected and available integrations"""
     raise HTTPException(
