@@ -3,6 +3,8 @@ fastapi==0.121.2
 uvicorn[standard]==0.41.0
 pydantic==2.13.1
 pydantic-settings==2.13.0
+# pydantic's EmailStr (auth schemas) needs this; it is not a transitive dep.
+email-validator==2.2.0
 python-multipart==0.0.20
 
 # Persistence
