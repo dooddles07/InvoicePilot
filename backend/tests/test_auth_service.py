@@ -89,3 +89,73 @@ def test_the_workspace_slug_is_unique_across_signups(db: Session) -> None:
     )
     assert len(slugs) == 2
     assert all(slug.startswith("ada-s-workspace-") for slug in slugs)
+
+
+from app.core.errors import AuthenticationFailed  # noqa: E402
+from app.schemas.auth import LoginRequest  # noqa: E402
+
+
+def test_login_returns_a_session_for_the_right_password(db: Session) -> None:
+    _signup(db)
+    result = AuthService(db).login(
+        LoginRequest(email="ada@example.com", password="correct-horse-1")
+    )
+    assert result.user.email == "ada@example.com"
+    assert result.user.role == "owner"
+
+
+def test_login_is_case_insensitive_on_the_email(db: Session) -> None:
+    _signup(db)
+    result = AuthService(db).login(
+        LoginRequest(email="ADA@example.com", password="correct-horse-1")
+    )
+    assert result.user.email == "ada@example.com"
+
+
+def test_a_wrong_password_and_an_unknown_email_fail_identically(db: Session) -> None:
+    # Identical exception type and message. Anything that distinguishes the two
+    # turns this endpoint into a list of which emails have accounts.
+    _signup(db)
+    service = AuthService(db)
+
+    with pytest.raises(AuthenticationFailed) as wrong_password:
+        service.login(LoginRequest(email="ada@example.com", password="wrong-guess-99"))
+    with pytest.raises(AuthenticationFailed) as unknown_email:
+        service.login(LoginRequest(email="nobody@example.com", password="wrong-guess-99"))
+
+    assert str(wrong_password.value) == str(unknown_email.value) == "Invalid credentials"
+
+
+def test_an_unknown_email_still_verifies_a_hash(db: Session, monkeypatch) -> None:
+    # The timing half of the same defence: if the unknown-email path returned
+    # without hashing, it would answer in a millisecond while a real account
+    # took argon2's ~300ms, and the clock would leak the answer.
+    calls: list[str] = []
+    import app.services.auth as auth_module
+
+    real = auth_module.verify_password
+    monkeypatch.setattr(
+        auth_module,
+        "verify_password",
+        lambda plaintext, hashed: calls.append(hashed) or real(plaintext, hashed),
+    )
+    with pytest.raises(AuthenticationFailed):
+        AuthService(db).login(
+            LoginRequest(email="nobody@example.com", password="wrong-guess-99")
+        )
+    assert len(calls) == 1
+
+
+def test_login_without_an_active_membership_fails(db: Session) -> None:
+    # A user whose only membership was revoked has valid credentials and no
+    # workspace to enter. Issuing a token with no workspace would be a token
+    # every repository query then filters against nothing with.
+    result = _signup(db)
+    db.execute(
+        text("UPDATE workspace_members SET status = 'invited' WHERE workspace_id = :ws"),
+        {"ws": result.user.workspace_id},
+    )
+    with pytest.raises(AuthenticationFailed):
+        AuthService(db).login(
+            LoginRequest(email="ada@example.com", password="correct-horse-1")
+        )

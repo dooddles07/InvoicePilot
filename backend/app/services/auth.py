@@ -141,6 +141,58 @@ class AuthService:
         self.session.commit()
         return result
 
+    # A real argon2 hash of a value nobody knows. Verified against when the
+    # email is unknown, so the failing path costs the same wall-clock time as
+    # the succeeding one.
+    _DUMMY_HASH = hash_password(uuid.uuid4().hex)
+
+    def login(self, request: LoginRequest) -> AuthResult:
+        email = request.email.strip().lower()
+        user = self.session.scalar(
+            select(User).where(func.lower(User.email) == email)
+        )
+
+        password_hash = user.password_hash if user else self._DUMMY_HASH
+        password_ok = verify_password(request.password, password_hash)
+        if user is None or not password_ok:
+            raise AuthenticationFailed()
+
+        membership = self._active_membership(user.id)
+        if membership is None:
+            raise AuthenticationFailed()
+
+        workspace, role = membership
+        result = self._issue(user, workspace, role)
+        self.session.commit()
+        return result
+
+    def _active_membership(
+        self, user_id: uuid.UUID, workspace_id: uuid.UUID | None = None
+    ) -> tuple[Workspace, Role] | None:
+        """The workspace a login lands in.
+
+        With no ``workspace_id``, the oldest active membership wins, which
+        keeps a returning user in the workspace they think of as theirs rather
+        than whichever one was created last.
+        """
+
+        stmt = (
+            select(Workspace, WorkspaceMember.role)
+            .join(WorkspaceMember, WorkspaceMember.workspace_id == Workspace.id)
+            .where(
+                WorkspaceMember.user_id == user_id,
+                WorkspaceMember.status == "active",
+            )
+            .order_by(WorkspaceMember.created_at)
+        )
+        if workspace_id is not None:
+            stmt = stmt.where(Workspace.id == workspace_id)
+
+        row = self.session.execute(stmt).first()
+        if row is None:
+            return None
+        return row[0], row[1]
+
     # --- shared -----------------------------------------------------------
 
     def _issue(self, user: User, workspace: Workspace, role: Role) -> AuthResult:
