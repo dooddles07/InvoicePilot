@@ -336,7 +336,14 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
 
 - [ ] **Step 10: Write the global setup**
 
-Create `src/server/test/global-setup.ts`:
+Create `src/server/test/global-setup.ts`. It imports `scripts/migrate.mts`
+with the extension written out, which needs `allowImportingTsExtensions` in
+`tsconfig.json` (added in Task 6, Step 1) — dropping the extension instead is
+not an option here: Vite's resolver finds the `.mts` file extensionless, but
+`tsc`'s `bundler` module resolution does not probe `.mts`/`.cts` for a bare
+specifier, so plain `tsc --noEmit` fails the import with TS2307 even though
+`npm test` passes. Until Task 6 lands, `tsc --noEmit` fails on exactly this
+one line — that is expected and Task 6 Step 1 is what clears it.
 
 ```ts
 import postgres from "postgres";
@@ -1539,12 +1546,13 @@ git commit -m "test: cover the collection queue ranking and exclusions"
 - Create: `src/server/models/schema.test.ts`
 - Create: `.github/workflows/ci.yml`
 - Modify: `package.json` (add the `db:pull` script)
+- Modify: `tsconfig.json` (`allowImportingTsExtensions`)
 
 **Interfaces:**
 - Consumes: the applied database from Tasks 2 and 3.
 - Produces: `src/server/models/schema.ts`, exporting a Drizzle table object per table — `workspaces`, `users`, `refreshTokens`, `workspaceMembers`, `customers`, `invoices`, `invoiceItems`, `payments`, `collectionEvents`, `communicationLogs`, `auditLogs`, `emailTemplates`, `importBatches`. P2 imports these for typed queries.
 
-- [ ] **Step 1: Write the Drizzle config**
+- [ ] **Step 1: Write the Drizzle config, and let TypeScript import `.mts` explicitly**
 
 Create `drizzle.config.ts`:
 
@@ -1558,6 +1566,22 @@ export default defineConfig({
   dbCredentials: { url: process.env.DATABASE_URL! },
 });
 ```
+
+Also add one compiler option to `tsconfig.json`, next to `"noEmit": true`:
+
+```json
+    "allowImportingTsExtensions": true,
+```
+
+This is what Task 1 Step 10's `global-setup.ts` needs for its
+`"../../../scripts/migrate.mts"` import to type-check. The two toolchains
+disagree here: Vite's resolver finds a `.mts` file from a bare, extensionless
+specifier, but `tsc`'s `bundler` module resolution does not probe
+`.mts`/`.cts` for one, so a bare specifier passes `npm test` yet fails
+`tsc --noEmit` with TS2307. Writing the extension explicitly resolves under
+both — but TypeScript refuses an extensioned relative import unless this flag
+is on, which it can be here because `noEmit` is already `true` (this project
+never asks `tsc` to emit; Next's own compiler does that).
 
 - [ ] **Step 2: Add the pull script to `package.json`**
 
