@@ -1,6 +1,6 @@
 import postgres from "postgres";
 
-import { applyMigrations } from "../../../scripts/migrate";
+import { applyMigrations } from "../../../scripts/migrate.mts";
 import { assertTestDatabase } from "./database";
 
 /**

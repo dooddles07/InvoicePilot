@@ -9,7 +9,7 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "db:migrate": "tsx scripts/migrate.ts",
+    "db:migrate": "tsx scripts/migrate.mts",
     "db:pull": "drizzle-kit pull"
   },
   "dependencies": {

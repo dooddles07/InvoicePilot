@@ -1,5 +1,6 @@
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
+import { expect } from "vitest";
 
 /**
  * Refuse to run against anything not obviously a test database.
@@ -56,4 +57,22 @@ export async function withRollback<T>(fn: (tx: Tx) => Promise<T>): Promise<T> {
     if (!(error instanceof Rollback)) throw error;
   }
   return result;
+}
+
+/**
+ * Assert a promise rejects because of a specific named constraint.
+ *
+ * Drizzle wraps every driver error in a `DrizzleQueryError` whose own
+ * `.message` is just "Failed query: <sql>" -- the Postgres error naming the
+ * constraint is one level down, on `.cause`.
+ */
+export async function expectConstraintViolation(
+  promise: Promise<unknown>,
+  constraint: string,
+): Promise<void> {
+  await expect(promise).rejects.toSatisfy((error: unknown) => {
+    const cause = error instanceof Error ? error.cause : undefined;
+    const message = cause instanceof Error ? cause.message : String(error);
+    return message.includes(constraint);
+  });
 }

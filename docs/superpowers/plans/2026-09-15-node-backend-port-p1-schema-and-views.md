@@ -39,7 +39,7 @@
 - Create: `src/server/db.ts`
 - Create: `src/server/test/database.ts`
 - Create: `src/server/test/global-setup.ts`
-- Create: `scripts/migrate.ts`
+- Create: `scripts/migrate.mts`
 - Create: `vitest.config.ts`
 - Create: `src/server/test/database.test.ts`
 - Create: `.env.example`
@@ -53,6 +53,7 @@
   - `assertTestDatabase(url: string): void` — throws if the database name does not contain `test`
   - `Tx` — the transaction handle type every factory and test takes
   - `withRollback<T>(fn: (tx: Tx) => Promise<T>): Promise<T>` — runs `fn` in a transaction that is always rolled back
+  - `expectConstraintViolation(promise, constraint: string): Promise<void>` — asserts a query rejected because of the named constraint, unwrapping Drizzle's `DrizzleQueryError` to check `.cause.message`
   - `applyMigrations(connectionString: string): Promise<string[]>` — applies pending `drizzle/*.sql` files, returns the filenames applied
 
 - [ ] **Step 1: Install dependencies**
@@ -69,7 +70,7 @@ Add to the `"scripts"` object, leaving `dev`, `build`, `start` and `lint` as the
 ```json
     "test": "vitest run",
     "test:watch": "vitest",
-    "db:migrate": "tsx scripts/migrate.ts"
+    "db:migrate": "tsx scripts/migrate.mts"
 ```
 
 - [ ] **Step 3: Write `.env.example`**
@@ -181,6 +182,7 @@ Create `src/server/test/database.ts`:
 ```ts
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
+import { expect } from "vitest";
 
 /**
  * Refuse to run against anything not obviously a test database.
@@ -238,11 +240,34 @@ export async function withRollback<T>(fn: (tx: Tx) => Promise<T>): Promise<T> {
   }
   return result;
 }
+
+/**
+ * Assert a promise rejects because of a specific named constraint.
+ *
+ * Drizzle wraps every driver error in a `DrizzleQueryError` whose own
+ * `.message` is just "Failed query: <sql>" -- the Postgres error naming the
+ * constraint is one level down, on `.cause`.
+ */
+export async function expectConstraintViolation(
+  promise: Promise<unknown>,
+  constraint: string,
+): Promise<void> {
+  await expect(promise).rejects.toSatisfy((error: unknown) => {
+    const cause = error instanceof Error ? error.cause : undefined;
+    const message = cause instanceof Error ? cause.message : String(error);
+    return message.includes(constraint);
+  });
+}
 ```
 
 - [ ] **Step 9: Write the migration runner**
 
-Create `scripts/migrate.ts`:
+Create `scripts/migrate.mts`. The `.mts` extension, not `.ts`: this
+repository has no `"type": "module"` in `package.json`, so `tsx` treats a
+plain `.ts` file as CommonJS output — and CommonJS cannot use the top-level
+`await` at the bottom of this file. `.mts` forces ESM regardless of the
+package's module type, the same reason `vitest.config.mts` is not
+`vitest.config.ts`.
 
 ```ts
 import { readdir, readFile } from "node:fs/promises";
@@ -316,7 +341,7 @@ Create `src/server/test/global-setup.ts`:
 ```ts
 import postgres from "postgres";
 
-import { applyMigrations } from "../../../scripts/migrate";
+import { applyMigrations } from "../../../scripts/migrate.mts";
 import { assertTestDatabase } from "./database";
 
 /**
@@ -366,7 +391,7 @@ Expected: PASS, 5 tests.
 - [ ] **Step 14: Commit**
 
 ```bash
-git add package.json package-lock.json vitest.config.ts .env.example scripts/migrate.ts src/server/db.ts src/server/test/
+git add package.json package-lock.json vitest.config.mts .env.example scripts/migrate.mts src/server/db.ts src/server/test/
 git commit -m "feat: add the database client, migration runner and test harness"
 ```
 
@@ -380,7 +405,7 @@ git commit -m "feat: add the database client, migration runner and test harness"
 - Create: `src/server/test/schema.test.ts`
 
 **Interfaces:**
-- Consumes: `withRollback`, `testDb` from `src/server/test/database.ts`.
+- Consumes: `withRollback`, `expectConstraintViolation`, `testDb` from `src/server/test/database.ts`.
 - Produces:
   - `drizzle/0000_schema.sql` — 13 tables, 2 enum types, all constraints and indexes
   - `makeWorkspace(tx): Promise<string>` — inserts a workspace, returns its id
@@ -395,7 +420,7 @@ Create `src/server/test/schema.test.ts`:
 import { sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 
-import { withRollback } from "./database";
+import { expectConstraintViolation, withRollback } from "./database";
 import { makeCustomer, makeInvoice, makeWorkspace } from "./factories";
 
 describe("invoice constraints", () => {
@@ -403,9 +428,10 @@ describe("invoice constraints", () => {
     await withRollback(async (tx) => {
       const ws = await makeWorkspace(tx);
       const customer = await makeCustomer(tx, ws, { name: "Zero Co" });
-      await expect(
+      await expectConstraintViolation(
         makeInvoice(tx, ws, customer, { amount: 0 }),
-      ).rejects.toThrow(/ck_invoices_amount_positive/);
+        "ck_invoices_amount_positive",
+      );
     });
   });
 
@@ -413,9 +439,10 @@ describe("invoice constraints", () => {
     await withRollback(async (tx) => {
       const ws = await makeWorkspace(tx);
       const customer = await makeCustomer(tx, ws, { name: "Overpaid Co" });
-      await expect(
+      await expectConstraintViolation(
         makeInvoice(tx, ws, customer, { amount: 10_000, paid: 10_001 }),
-      ).rejects.toThrow(/ck_invoices_paid_within_amount/);
+        "ck_invoices_paid_within_amount",
+      );
     });
   });
 
@@ -423,13 +450,14 @@ describe("invoice constraints", () => {
     await withRollback(async (tx) => {
       const ws = await makeWorkspace(tx);
       const customer = await makeCustomer(tx, ws, { name: "Backwards Co" });
-      await expect(
+      await expectConstraintViolation(
         makeInvoice(tx, ws, customer, {
           amount: 10_000,
           dueOffsetDays: -10,
           issueOffsetDays: 0,
         }),
-      ).rejects.toThrow(/ck_invoices_due_after_issue/);
+        "ck_invoices_due_after_issue",
+      );
     });
   });
 
@@ -441,12 +469,13 @@ describe("invoice constraints", () => {
         INSERT INTO invoices (id, workspace_id, number, customer_id, amount_cents, issue_date, due_date)
         VALUES (gen_random_uuid(), ${ws}, 'INV-1', ${customer}, 10000, CURRENT_DATE, CURRENT_DATE)
       `);
-      await expect(
+      await expectConstraintViolation(
         tx.execute(sql`
           INSERT INTO invoices (id, workspace_id, number, customer_id, amount_cents, issue_date, due_date)
           VALUES (gen_random_uuid(), ${ws}, 'INV-1', ${customer}, 20000, CURRENT_DATE, CURRENT_DATE)
         `),
-      ).rejects.toThrow(/uq_invoices_workspace_number/);
+        "uq_invoices_workspace_number",
+      );
     });
   });
 });
@@ -485,24 +514,26 @@ describe("workspace_members constraints", () => {
   it("rejects a role outside the four", async () => {
     await withRollback(async (tx) => {
       const ws = await makeWorkspace(tx);
-      await expect(
+      await expectConstraintViolation(
         tx.execute(sql`
           INSERT INTO workspace_members (id, workspace_id, invited_email, role)
           VALUES (gen_random_uuid(), ${ws}, 'someone@example.test', 'superuser')
         `),
-      ).rejects.toThrow(/ck_workspace_members_role/);
+        "ck_workspace_members_role",
+      );
     });
   });
 
   it("rejects a member with neither a user nor an invited email", async () => {
     await withRollback(async (tx) => {
       const ws = await makeWorkspace(tx);
-      await expect(
+      await expectConstraintViolation(
         tx.execute(sql`
           INSERT INTO workspace_members (id, workspace_id)
           VALUES (gen_random_uuid(), ${ws})
         `),
-      ).rejects.toThrow(/ck_workspace_members_identified/);
+        "ck_workspace_members_identified",
+      );
     });
   });
 });
@@ -514,12 +545,13 @@ describe("users", () => {
         INSERT INTO users (id, email, full_name, password_hash)
         VALUES (gen_random_uuid(), 'Sam@example.test', 'Sam', 'x')
       `);
-      await expect(
+      await expectConstraintViolation(
         tx.execute(sql`
           INSERT INTO users (id, email, full_name, password_hash)
           VALUES (gen_random_uuid(), 'sam@example.test', 'Sam Again', 'x')
         `),
-      ).rejects.toThrow(/uq_users_email_lower/);
+        "uq_users_email_lower",
+      );
     });
   });
 });
@@ -539,13 +571,24 @@ describe("communication_logs", () => {
         )
       `);
       await insert("same-key");
-      await expect(insert("same-key")).rejects.toThrow(
-        /uq_communication_logs_workspace_key/,
+      await expectConstraintViolation(
+        insert("same-key"),
+        "uq_communication_logs_workspace_key",
       );
     });
   });
 });
 ```
+
+Note on the assertion style: every constraint check above uses
+`expectConstraintViolation`, not `.rejects.toThrow(/pattern/)`. Drizzle wraps
+the driver's error in `DrizzleQueryError`, whose own `.message` is just
+"Failed query: `<sql>`" — the real Postgres error naming the constraint is one
+level down, on `.cause`. `toThrow(regex)` only ever sees the outer message, so
+it cannot see the constraint name; `expectConstraintViolation` (Task 1, Step
+8) unwraps `.cause` before matching. The one exception is "cannot be written
+directly" below, which only needs to know *that* it throws, not why, so plain
+`.rejects.toThrow()` is enough there.
 
 - [ ] **Step 2: Write the test factories**
 
@@ -948,7 +991,7 @@ Expected: `applied: 0000_schema.sql`
 - [ ] **Step 6: Run the tests to verify they pass**
 
 Run: `npx vitest run src/server/test/schema.test.ts`
-Expected: PASS, 9 tests.
+Expected: PASS, 10 tests.
 
 - [ ] **Step 7: Commit**
 
@@ -1477,7 +1520,7 @@ Expected: PASS, 3 tests.
 - [ ] **Step 3: Run the whole suite**
 
 Run: `npm test`
-Expected: PASS, 28 tests across 5 files.
+Expected: PASS, 29 tests across 5 files.
 
 - [ ] **Step 4: Commit**
 
@@ -1656,7 +1699,7 @@ npx tsc --noEmit
 npm run build
 ```
 
-Expected: tests pass (29 across 6 files), no type errors, build succeeds.
+Expected: tests pass (30 across 6 files), no type errors, build succeeds.
 
 - [ ] **Step 9: Commit**
 
@@ -1669,7 +1712,7 @@ git commit -m "feat: generate the typed schema and add CI"
 
 ## Done when
 
-- `npm test` passes: 29 tests across 6 files.
+- `npm test` passes: 30 tests across 6 files.
 - `npm run db:migrate` applies both SQL files to an empty database and is a no-op on a second run.
 - `npx tsc --noEmit` and `npm run build` pass.
 - `src/server/models/schema.ts` exports a typed table object for all 13 tables.
