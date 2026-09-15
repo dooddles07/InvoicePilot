@@ -1,7 +1,7 @@
 # InvoicePilot — Node Backend Port
 
 **Date:** 2026-09-15
-**Status:** approved, awaiting implementation plan
+**Status:** superseded by `docs/superpowers/specs/2026-09-15-express-backend-port-design.md`. Phase P1 shipped; its SQL carries into the Express port, its TypeScript does not.
 **Supersedes:** large parts of `docs/superpowers/specs/2026-09-11-free-tier-deployment-and-phases-3-6-design.md` (see §10)
 
 ---
