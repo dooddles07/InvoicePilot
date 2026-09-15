@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- Node runtime only. Nothing in `src/server/` may be imported by a client component; every module in it imports `server-only` (already a dependency).
+- Node runtime only. Nothing in `src/server/` may be imported by a client component. Modules holding a live connection, secret, or credential import `server-only` (already a dependency); pure metadata modules such as the generated schema do not — see Task 6 Step 3 for why.
 - Money is integer minor units: `amount_cents`, `paid_cents`, `balance_cents` are `bigint`. Never `float`, never `numeric`, never a formatted string.
 - Every tenant table carries `workspace_id` with an index that leads on it.
 - The database client is configured `max: 1`, `prepare: false`. Neon's pooled endpoint runs PgBouncer in transaction mode, which rejects prepared statements.
@@ -247,6 +247,7 @@ Create `scripts/migrate.ts`:
 ```ts
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 
 import postgres from "postgres";
 
@@ -297,7 +298,10 @@ export async function applyMigrations(
   }
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+// A plain `file://${process.argv[1]}` comparison breaks on Windows: argv[1]
+// keeps backslashes and an unencoded drive letter, import.meta.url does not.
+// pathToFileURL normalises both sides the same way regardless of platform.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const url = process.env.DATABASE_URL;
   if (!url) throw new Error("DATABASE_URL is not set");
   const ran = await applyMigrations(url);
@@ -1541,8 +1545,14 @@ rm -rf drizzle/relations.ts drizzle/meta
 git checkout drizzle/0000_schema.sql drizzle/0001_derivation_views.sql 2>/dev/null || true
 ```
 
-Then add `import "server-only";` as the first line of
-`src/server/models/schema.ts`.
+Do **not** add `import "server-only";` to this file, despite the global
+constraint in §Global Constraints. `server-only` throws unconditionally
+outside Next's bundler — Next special-cases it in webpack/Turbopack, but
+plain Node resolution (which `tsx` and Vitest use) follows the package's
+`exports` map straight to the throwing branch. `schema.test.ts` (Step 5) would
+crash on import. `db.ts` keeps the guard, because it holds the live
+connection; `schema.ts` is column and table metadata with nothing secret in
+it, so the guard buys nothing here and costs the test suite.
 
 - [ ] **Step 4: Confirm what was generated**
 
