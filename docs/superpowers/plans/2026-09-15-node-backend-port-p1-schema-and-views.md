@@ -56,14 +56,14 @@
   - `expectConstraintViolation(promise, constraint: string): Promise<void>` — asserts a query rejected because of the named constraint, unwrapping Drizzle's `DrizzleQueryError` to check `.cause.message`
   - `applyMigrations(connectionString: string): Promise<string[]>` — applies pending `drizzle/*.sql` files, returns the filenames applied
 
-- [ ] **Step 1: Install dependencies**
+- [x] **Step 1: Install dependencies**
 
 ```bash
 npm install drizzle-orm postgres
 npm install -D drizzle-kit vitest tsx
 ```
 
-- [ ] **Step 2: Add scripts to `package.json`**
+- [x] **Step 2: Add scripts to `package.json`**
 
 Add to the `"scripts"` object, leaving `dev`, `build`, `start` and `lint` as they are:
 
@@ -73,7 +73,7 @@ Add to the `"scripts"` object, leaving `dev`, `build`, `start` and `lint` as the
     "db:migrate": "tsx scripts/migrate.mts"
 ```
 
-- [ ] **Step 3: Write `.env.example`**
+- [x] **Step 3: Write `.env.example`**
 
 ```bash
 # Application database. On Vercel this is Neon's POOLED connection string.
@@ -84,7 +84,7 @@ DATABASE_URL="postgresql://postgres:postgres@localhost:5432/invoicepilot"
 # DATABASE_URL="postgresql://postgres:postgres@localhost:5432/invoicepilot_test"
 ```
 
-- [ ] **Step 4: Write the failing test for the test-database guard**
+- [x] **Step 4: Write the failing test for the test-database guard**
 
 Create `src/server/test/database.test.ts`:
 
@@ -128,7 +128,7 @@ describe("assertTestDatabase", () => {
 });
 ```
 
-- [ ] **Step 5: Write `vitest.config.ts`**
+- [x] **Step 5: Write `vitest.config.ts`**
 
 ```ts
 import { defineConfig } from "vitest/config";
@@ -149,12 +149,12 @@ export default defineConfig({
 });
 ```
 
-- [ ] **Step 6: Run the test to verify it fails**
+- [x] **Step 6: Run the test to verify it fails**
 
 Run: `npx vitest run src/server/test/database.test.ts`
 Expected: FAIL — `Failed to resolve import "./database"`.
 
-- [ ] **Step 7: Write the database client**
+- [x] **Step 7: Write the database client**
 
 Create `src/server/db.ts`:
 
@@ -175,7 +175,7 @@ export const sql = postgres(connectionString, { max: 1, prepare: false });
 export const db = drizzle(sql);
 ```
 
-- [ ] **Step 8: Write the test harness**
+- [x] **Step 8: Write the test harness**
 
 Create `src/server/test/database.ts`:
 
@@ -260,7 +260,7 @@ export async function expectConstraintViolation(
 }
 ```
 
-- [ ] **Step 9: Write the migration runner**
+- [x] **Step 9: Write the migration runner**
 
 Create `scripts/migrate.mts`. The `.mts` extension, not `.ts`: this
 repository has no `"type": "module"` in `package.json`, so `tsx` treats a
@@ -334,7 +334,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
 }
 ```
 
-- [ ] **Step 10: Write the global setup**
+- [x] **Step 10: Write the global setup**
 
 Create `src/server/test/global-setup.ts`. It imports `scripts/migrate.mts`
 with the extension written out, which needs `allowImportingTsExtensions` in
@@ -373,7 +373,7 @@ export async function setup() {
 }
 ```
 
-- [ ] **Step 11: Create the migrations directory**
+- [x] **Step 11: Create the migrations directory**
 
 ```bash
 mkdir drizzle
@@ -381,7 +381,7 @@ mkdir drizzle
 
 The directory must exist before `applyMigrations` reads it. Task 2 puts the first file in it.
 
-- [ ] **Step 12: Start a test database**
+- [x] **Step 12: Start a test database**
 
 ```bash
 docker run -d --name invoicepilot-test -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=invoicepilot_test -p 5432:5432 postgres:16
@@ -390,12 +390,12 @@ export DATABASE_URL="postgresql://postgres:postgres@localhost:5432/invoicepilot_
 
 A Neon branch whose database name contains `test` works identically; use its direct, unpooled connection string.
 
-- [ ] **Step 13: Run the test to verify it passes**
+- [x] **Step 13: Run the test to verify it passes**
 
 Run: `npx vitest run src/server/test/database.test.ts`
 Expected: PASS, 5 tests.
 
-- [ ] **Step 14: Commit**
+- [x] **Step 14: Commit**
 
 ```bash
 git add package.json package-lock.json vitest.config.mts .env.example scripts/migrate.mts src/server/db.ts src/server/test/
@@ -419,7 +419,7 @@ git commit -m "feat: add the database client, migration runner and test harness"
   - `makeCustomer(tx, workspaceId, opts: { name: string; terms?: number }): Promise<string>`
   - `makeInvoice(tx, workspaceId, customerId, opts: { amount: number; paid?: number; dueOffsetDays?: number; issueOffsetDays?: number; paidOffsetDays?: number; status?: string }): Promise<string>`
 
-- [ ] **Step 1: Write the failing schema tests**
+- [x] **Step 1: Write the failing schema tests**
 
 Create `src/server/test/schema.test.ts`:
 
@@ -597,7 +597,7 @@ it cannot see the constraint name; `expectConstraintViolation` (Task 1, Step
 directly" below, which only needs to know *that* it throws, not why, so plain
 `.rejects.toThrow()` is enough there.
 
-- [ ] **Step 2: Write the test factories**
+- [x] **Step 2: Write the test factories**
 
 Create `src/server/test/factories.ts`:
 
@@ -685,12 +685,12 @@ export async function makeInvoice(
 }
 ```
 
-- [ ] **Step 3: Run the tests to verify they fail**
+- [x] **Step 3: Run the tests to verify they fail**
 
 Run: `npx vitest run src/server/test/schema.test.ts`
 Expected: FAIL — `relation "workspaces" does not exist`.
 
-- [ ] **Step 4: Write the schema**
+- [x] **Step 4: Write the schema**
 
 Create `drizzle/0000_schema.sql`:
 
@@ -990,17 +990,17 @@ CREATE INDEX ix_import_batches_workspace_id ON import_batches (workspace_id);
 
 Note on `updated_at`: the Python models set it with SQLAlchemy's `onupdate`, which is application-side and emitted no DDL. There is no trigger here for the same reason — the behaviour is identical, and a trigger would be new behaviour introduced by a port.
 
-- [ ] **Step 5: Apply the schema**
+- [x] **Step 5: Apply the schema**
 
 Run: `npm run db:migrate`
 Expected: `applied: 0000_schema.sql`
 
-- [ ] **Step 6: Run the tests to verify they pass**
+- [x] **Step 6: Run the tests to verify they pass**
 
 Run: `npx vitest run src/server/test/schema.test.ts`
 Expected: PASS, 10 tests.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add drizzle/0000_schema.sql src/server/test/factories.ts src/server/test/schema.test.ts
@@ -1019,7 +1019,7 @@ git commit -m "feat: port the InvoicePilot schema to SQL"
 - Consumes: `withRollback`, `makeWorkspace`, `makeCustomer`, `makeInvoice`.
 - Produces: the views `invoice_state`, `customer_stats` and `collection_queue`. All three are created in this task because `customer_stats` reads `invoice_state` and `collection_queue` reads both; splitting the file would mean a migration that does not apply on its own. Tasks 4 and 5 test the other two.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `src/server/test/views-invoice-state.test.ts`:
 
@@ -1122,12 +1122,12 @@ describe("invoice_state", () => {
 });
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `npx vitest run src/server/test/views-invoice-state.test.ts`
 Expected: FAIL — `relation "invoice_state" does not exist`.
 
-- [ ] **Step 3: Write the views migration**
+- [x] **Step 3: Write the views migration**
 
 Create `drizzle/0001_derivation_views.sql`. The SQL bodies are carried over unchanged from Alembic revision 0003:
 
@@ -1261,17 +1261,17 @@ FROM (
 ORDER BY q.workspace_id, q.recovery_score DESC;
 ```
 
-- [ ] **Step 4: Apply the migration**
+- [x] **Step 4: Apply the migration**
 
 Run: `npm run db:migrate`
 Expected: `applied: 0001_derivation_views.sql`
 
-- [ ] **Step 5: Run the tests to verify they pass**
+- [x] **Step 5: Run the tests to verify they pass**
 
 Run: `npx vitest run src/server/test/views-invoice-state.test.ts`
 Expected: PASS, 5 tests.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add drizzle/0001_derivation_views.sql src/server/test/views-invoice-state.test.ts
@@ -1289,7 +1289,7 @@ git commit -m "feat: port the derivation views and cover invoice_state"
 - Consumes: `withRollback`, `makeWorkspace`, `makeCustomer`, `makeInvoice`, and the `customer_stats` view created in Task 3.
 - Produces: nothing other tasks depend on.
 
-- [ ] **Step 1: Write the tests**
+- [x] **Step 1: Write the tests**
 
 Create `src/server/test/views-customer-stats.test.ts`:
 
@@ -1422,12 +1422,12 @@ describe("customer_stats", () => {
 });
 ```
 
-- [ ] **Step 2: Run the tests**
+- [x] **Step 2: Run the tests**
 
 Run: `npx vitest run src/server/test/views-customer-stats.test.ts`
 Expected: PASS, 6 tests. The view already exists from Task 3, so these pass on first run — they are a port of behaviour, not a new rule. If any fails, the view SQL was transcribed wrongly; fix `drizzle/0001_derivation_views.sql` against `backend/migrations/versions/0003_derivation_views.py`.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/server/test/views-customer-stats.test.ts
@@ -1445,7 +1445,7 @@ git commit -m "test: cover the customer_stats risk grading rules"
 - Consumes: `withRollback`, `makeWorkspace`, `makeCustomer`, `makeInvoice`, and the `collection_queue` view created in Task 3.
 - Produces: nothing other tasks depend on.
 
-- [ ] **Step 1: Write the tests**
+- [x] **Step 1: Write the tests**
 
 Create `src/server/test/views-collection-queue.test.ts`:
 
@@ -1519,17 +1519,17 @@ describe("collection_queue", () => {
 });
 ```
 
-- [ ] **Step 2: Run the tests**
+- [x] **Step 2: Run the tests**
 
 Run: `npx vitest run src/server/test/views-collection-queue.test.ts`
 Expected: PASS, 3 tests.
 
-- [ ] **Step 3: Run the whole suite**
+- [x] **Step 3: Run the whole suite**
 
 Run: `npm test`
 Expected: PASS, 29 tests across 5 files.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/server/test/views-collection-queue.test.ts
@@ -1552,7 +1552,7 @@ git commit -m "test: cover the collection queue ranking and exclusions"
 - Consumes: the applied database from Tasks 2 and 3.
 - Produces: `src/server/models/schema.ts`, exporting a Drizzle table object per table — `workspaces`, `users`, `refreshTokens`, `workspaceMembers`, `customers`, `invoices`, `invoiceItems`, `payments`, `collectionEvents`, `communicationLogs`, `auditLogs`, `emailTemplates`, `importBatches`. P2 imports these for typed queries.
 
-- [ ] **Step 1: Write the Drizzle config, and let TypeScript import `.mts` explicitly**
+- [x] **Step 1: Write the Drizzle config, and let TypeScript import `.mts` explicitly**
 
 Create `drizzle.config.ts`:
 
@@ -1583,13 +1583,13 @@ both — but TypeScript refuses an extensioned relative import unless this flag
 is on, which it can be here because `noEmit` is already `true` (this project
 never asks `tsc` to emit; Next's own compiler does that).
 
-- [ ] **Step 2: Add the pull script to `package.json`**
+- [x] **Step 2: Add the pull script to `package.json`**
 
 ```json
     "db:pull": "drizzle-kit pull"
 ```
 
-- [ ] **Step 3: Generate the schema from the applied database**
+- [x] **Step 3: Generate the schema from the applied database**
 
 ```bash
 npx drizzle-kit pull
@@ -1621,7 +1621,7 @@ crash on import. `db.ts` keeps the guard, because it holds the live
 connection; `schema.ts` is column and table metadata with nothing secret in
 it, so the guard buys nothing here and costs the test suite.
 
-- [ ] **Step 4: Confirm what was generated**
+- [x] **Step 4: Confirm what was generated**
 
 Run: `git status --short drizzle/`
 Expected: no modifications to `drizzle/0000_schema.sql` or
@@ -1629,7 +1629,7 @@ Expected: no modifications to `drizzle/0000_schema.sql` or
 the hand-written SQL is the source of truth and must not be overwritten by a
 generator.
 
-- [ ] **Step 5: Write a typed-query test**
+- [x] **Step 5: Write a typed-query test**
 
 Create `src/server/models/schema.test.ts`:
 
@@ -1663,12 +1663,12 @@ If `drizzle-kit pull` names a column differently from `paymentTermsDays`, use
 the name it generated — the generated file is authoritative, and this test
 exists to prove the generated names work, not to dictate them.
 
-- [ ] **Step 6: Run the test**
+- [x] **Step 6: Run the test**
 
 Run: `npx vitest run src/server/models/schema.test.ts`
 Expected: PASS, 1 test.
 
-- [ ] **Step 7: Write the CI workflow**
+- [x] **Step 7: Write the CI workflow**
 
 Create `.github/workflows/ci.yml`:
 
@@ -1715,7 +1715,7 @@ The Python job is not added here. `backend/` still runs its own `pytest`
 locally and is deleted in P3; adding a CI job for code scheduled for deletion
 is work with a known expiry date.
 
-- [ ] **Step 8: Run the full local check**
+- [x] **Step 8: Run the full local check**
 
 ```bash
 npm test
@@ -1725,7 +1725,7 @@ npm run build
 
 Expected: tests pass (30 across 6 files), no type errors, build succeeds.
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add drizzle.config.ts package.json src/server/models/ .github/workflows/ci.yml
@@ -1745,3 +1745,83 @@ git commit -m "feat: generate the typed schema and add CI"
 ## What P2 picks up
 
 `security.ts`, `errors.ts`, the auth service and the five auth Route Handlers, with `test_security`, `test_auth_service`, `test_permissions` and the tenancy tests ported. P2 consumes `db`, `withRollback`, the factories, and the table objects in `src/server/models/schema.ts`.
+
+---
+
+## Status: done (2026-09-15)
+
+All 6 tasks complete, executed inline on `main` (no worktree — dropped by
+explicit choice; see below). **30/30 tests passing** across 6 files against a
+real local Postgres 17 (5 harness, 10 schema-constraint, 5 `invoice_state`, 6
+`customer_stats`, 3 `collection_queue`, 1 typed-schema query). `npx tsc
+--noEmit` exits 0. `npm run build` succeeds. `npm run db:migrate` is
+idempotent — second run reports "nothing to apply". `backend/` untouched,
+still has all 61 Python files. Pushed to `origin/main` at the user's request
+(no remote existed at session start; `origin` added pointing at
+`https://github.com/dooddles07/InvoicePilot.git`).
+
+### Environment, not part of the plan's scope
+
+- **No Docker, no local Postgres, no `gh` CLI** were present in this Windows
+  environment. PostgreSQL 17 was installed via `winget install --id
+  PostgreSQL.PostgreSQL.17` (the plan's literal `PostgreSQL.PostgreSQL` id
+  does not exist — winget IDs are version-suffixed). The installer's silent
+  mode sets the `postgres` superuser password to `postgres` with no flag
+  needed. A local `invoicepilot_test` database was created by hand for this
+  session; CI (Task 6) uses a disposable container instead, so this is a
+  local-dev-only step with nothing to commit.
+- **The free-tier-deployment worktree was deleted**, not this plan's work: a
+  pre-existing worktree (`.claude/worktrees/free-tier-deployment`, branch
+  `worktree-free-tier-deployment`) held 5 commits never merged to `main` plus
+  10 modified/1 untracked file, all implementing phase 0 of the now-superseded
+  free-tier deployment spec. Removed with explicit, informed user consent
+  after surfacing exactly what would be lost.
+
+### Deviations from the plan as written
+
+- **`scripts/migrate.ts` → `migrate.mts`, immediately, in Task 1.** `tsx`
+  compiles a plain `.ts` file as CommonJS here (no `"type": "module"` in
+  `package.json`), and CommonJS cannot run the file's top-level `await`.
+  `.mts` forces ESM regardless of the package's module type.
+- **`vitest.config.ts` → `vitest.config.mts`, in Task 1**, for the same
+  CJS/ESM reason — silences a Vite loader warning rather than fixing an error,
+  but same root cause.
+- **`allowImportingTsExtensions: true` added to `tsconfig.json`, in Task 6.**
+  `global-setup.ts` imports `scripts/migrate.mts` with the extension written
+  out because `tsc`'s `bundler` module resolution — unlike Vite's — does not
+  probe `.mts`/`.cts` for a bare specifier; a bare specifier passes `npm test`
+  but fails `tsc --noEmit` with TS2307. Writing the extension explicitly needs
+  this flag, which is safe here since `noEmit` was already `true`.
+- **`schema.ts` does not import `server-only`, contrary to the plan's original
+  global constraint.** `server-only`'s package.json resolves to a file that
+  throws unconditionally outside Next's bundler (Next special-cases it in
+  webpack/Turbopack; plain Node/Vite resolution does not). `schema.test.ts`
+  runs under Vitest and would have crashed on import. `db.ts` keeps the guard
+  — it holds the live connection; `schema.ts` is column/table metadata with
+  nothing secret in it.
+- **`file://${process.argv[1]}` replaced with `pathToFileURL(process.argv[1])`
+  in `scripts/migrate.mts`'s entry-point check.** The string-concat form
+  never matches on Windows: `argv[1]` keeps backslashes and an unencoded drive
+  letter, `import.meta.url` does not. Silent failure, not a crash — worth
+  flagging since it would have made `npm run db:migrate` a no-op CLI on every
+  Windows checkout, discovered only by noticing the plan's own code was
+  platform-unsafe before running it.
+- **`expectConstraintViolation` helper added to `database.ts`, not in the
+  original plan.** Drizzle wraps every driver error in `DrizzleQueryError`,
+  whose own `.message` is `"Failed query: <sql>"` — the actual Postgres error
+  naming the constraint is one level down, on `.cause`. The plan's original
+  `.rejects.toThrow(/constraint_name/)` assertions all failed for this reason
+  (8 of 10 in Task 2's first run); the helper unwraps `.cause` before
+  matching.
+- **Test counts were wrong throughout the plan**: 9 → 10 (Task 2, an
+  off-by-one in the written count, not a missing test), 28 → 29 and 29 → 30
+  (Tasks 5–6, propagated from the same miscount). Corrected in place rather
+  than left inconsistent with the actual suite.
+- **The ledger-invariant-suite deferral and the three-migrations-to-two
+  collapse were decided going in**, not discovered during execution — both
+  are documented in the plan's own Scope section and held exactly as written.
+
+### Not verified in-session
+
+Everything the plan's "Done when" section lists was verified directly. Nothing
+from P2 (auth service, Route Handlers, `security.ts`) was started.
