@@ -165,7 +165,7 @@ The secret key is a parameter rather than something this module reads from the
 environment. `config.js` already owns "read the environment once, fail fast",
 and a primitive that reaches for `process.env` cannot be tested without one.
 
-- [ ] **Step 1: Install the three dependencies**
+- [x] **Step 1: Install the three dependencies**
 
 Run from `backend/`:
 
@@ -184,7 +184,7 @@ Render's free tier has 512 MB for the whole process. No hash exists in any
 deployed database, and Argon2 encodes its parameters in the hash string, so
 this would be a compatible change even if one did.
 
-- [ ] **Step 2: Write the failing security test**
+- [x] **Step 2: Write the failing security test**
 
 Create `backend/tests/security.test.js`:
 
@@ -337,7 +337,7 @@ describe("the configured lifetimes", () => {
 });
 ```
 
-- [ ] **Step 3: Run it to verify it fails**
+- [x] **Step 3: Run it to verify it fails**
 
 Run from `backend/`:
 
@@ -347,7 +347,7 @@ node --test tests/security.test.js
 
 Expected: FAIL with `Cannot find module` for `../src/lib/security.js`.
 
-- [ ] **Step 4: Write the security module**
+- [x] **Step 4: Write the security module**
 
 Create `backend/src/lib/security.js`:
 
@@ -509,7 +509,7 @@ export function refreshExpiry() {
 }
 ```
 
-- [ ] **Step 5: Run the test to verify it passes**
+- [x] **Step 5: Run the test to verify it passes**
 
 Run from `backend/`:
 
@@ -519,7 +519,7 @@ node --test tests/security.test.js
 
 Expected: PASS, 14 tests.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add backend/package.json backend/package-lock.json backend/src/lib/security.js backend/tests/security.test.js
@@ -548,7 +548,7 @@ environment.
 Express 5 routes a rejected handler promise to the error middleware on its own,
 so neither of these catches anything, and no controller needs a `try`/`catch`.
 
-- [ ] **Step 1: Write the failing middleware test**
+- [x] **Step 1: Write the failing middleware test**
 
 Create `backend/tests/authenticate.test.js`:
 
@@ -681,7 +681,7 @@ describe("requirePermission", () => {
 });
 ```
 
-- [ ] **Step 2: Run it to verify it fails**
+- [x] **Step 2: Run it to verify it fails**
 
 Run from `backend/`:
 
@@ -691,7 +691,7 @@ node --test tests/authenticate.test.js
 
 Expected: FAIL with `Cannot find module` for `../src/middleware/authenticate.js`.
 
-- [ ] **Step 3: Write the authenticate middleware**
+- [x] **Step 3: Write the authenticate middleware**
 
 Create `backend/src/middleware/authenticate.js`:
 
@@ -729,7 +729,7 @@ export function authenticate(secretKey) {
 }
 ```
 
-- [ ] **Step 4: Write the permission guard**
+- [x] **Step 4: Write the permission guard**
 
 Create `backend/src/middleware/require.js`:
 
@@ -754,7 +754,7 @@ export function requirePermission(permission) {
 }
 ```
 
-- [ ] **Step 5: Run the test to verify it passes**
+- [x] **Step 5: Run the test to verify it passes**
 
 Run from `backend/`:
 
@@ -764,7 +764,7 @@ node --test tests/authenticate.test.js
 
 Expected: PASS, 9 tests.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add backend/src/middleware/authenticate.js backend/src/middleware/require.js backend/tests/authenticate.test.js
@@ -790,7 +790,7 @@ like working code.
 The reverse check — that no router guards a permission missing from the matrix
 — needs the routers, so it lands in Task 8 with them.
 
-- [ ] **Step 1: Write the matrix test**
+- [x] **Step 1: Write the matrix test**
 
 Create `backend/tests/permissions.test.js`:
 
@@ -871,7 +871,7 @@ describe("the grant lists themselves", () => {
 });
 ```
 
-- [ ] **Step 2: Run it to verify it passes**
+- [x] **Step 2: Run it to verify it passes**
 
 Run from `backend/`:
 
@@ -883,7 +883,7 @@ Expected: PASS, 67 tests (64 matrix cells plus 3). This suite asserts against
 Task 1's data, so it passes on the first run — that is the point of writing the
 data from the spec rather than from the routes.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add backend/tests/permissions.test.js
@@ -935,7 +935,7 @@ declared a `relationship()`, so the unit of work could order the INSERTs wrong.
 Raw SQL has no unit of work: statements run in the order they are written, and
 that comment does not port.
 
-- [ ] **Step 1: Write the failing model test**
+- [x] **Step 1: Write the failing model test**
 
 Create `backend/tests/models-auth.test.js`:
 
@@ -1183,7 +1183,7 @@ describe("workspaces", () => {
 });
 ```
 
-- [ ] **Step 2: Run it to verify it fails**
+- [x] **Step 2: Run it to verify it fails**
 
 Run from `backend/`:
 
@@ -1195,7 +1195,7 @@ Expected: FAIL — `models/auth.js` exports none of these names, so the import
 throws `SyntaxError: The requested module ... does not provide an export named
 'findUserByEmail'`.
 
-- [ ] **Step 3: Write the auth model**
+- [x] **Step 3: Write the auth model**
 
 Replace `backend/src/models/auth.js` with:
 
@@ -1304,7 +1304,7 @@ export async function setRefreshTokenReplacedBy(sql, id, replacedById) {
 }
 ```
 
-- [ ] **Step 4: Write the workspace and template models**
+- [x] **Step 4: Write the workspace and template models**
 
 Replace `backend/src/models/workspaces.js` with:
 
@@ -1392,7 +1392,7 @@ export async function insertEmailTemplates(sql, workspaceId) {
 }
 ```
 
-- [ ] **Step 5: Run the test to verify it passes**
+- [x] **Step 5: Run the test to verify it passes**
 
 Run from `backend/`:
 
@@ -1402,7 +1402,7 @@ node --test tests/models-auth.test.js
 
 Expected: PASS, 12 tests.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add backend/src/models/auth.js backend/src/models/workspaces.js backend/src/models/notifications.js backend/tests/models-auth.test.js
@@ -1433,7 +1433,7 @@ them" above. Signup is wrapped by its controller because a half-created
 workspace with no owner is worse than a failed signup. Login writes one row and
 needs no wrapper.
 
-- [ ] **Step 1: Write the failing signup and login tests**
+- [x] **Step 1: Write the failing signup and login tests**
 
 Create `backend/tests/auth-service.test.js`:
 
@@ -1663,7 +1663,7 @@ describe("login", () => {
 });
 ```
 
-- [ ] **Step 2: Run it to verify it fails**
+- [x] **Step 2: Run it to verify it fails**
 
 Run from `backend/`:
 
@@ -1673,7 +1673,7 @@ node --test tests/auth-service.test.js
 
 Expected: FAIL with `Cannot find module` for `../src/services/auth.js`.
 
-- [ ] **Step 3: Write signup, login, and the shared issue step**
+- [x] **Step 3: Write signup, login, and the shared issue step**
 
 Create `backend/src/services/auth.js`:
 
@@ -1830,7 +1830,7 @@ export async function login(sql, config, body) {
 }
 ```
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run from `backend/`:
 
@@ -1840,7 +1840,7 @@ node --test tests/auth-service.test.js
 
 Expected: PASS, 12 tests.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/src/services/auth.js backend/tests/auth-service.test.js
@@ -1876,7 +1876,7 @@ of the new row and the revocation of the old, both tokens are briefly valid.
 That widens nothing an attacker can use — the old token was valid a moment ago
 anyway — and the next use of either is what the reuse detector is for.
 
-- [ ] **Step 1: Write the failing rotation tests**
+- [x] **Step 1: Write the failing rotation tests**
 
 Append to `backend/tests/auth-service.test.js`. Add `hashRefreshToken` to the
 existing import from `../src/lib/security.js`, then add these imports and the
@@ -2067,7 +2067,7 @@ describe("describe", () => {
 });
 ```
 
-- [ ] **Step 2: Run it to verify it fails**
+- [x] **Step 2: Run it to verify it fails**
 
 Run from `backend/`:
 
@@ -2077,7 +2077,7 @@ node --test tests/auth-service.test.js
 
 Expected: FAIL — `services/auth.js` provides no export named `refresh`.
 
-- [ ] **Step 3: Write the rotation half of the service**
+- [x] **Step 3: Write the rotation half of the service**
 
 Add to `backend/src/services/auth.js` — extend the existing imports and append
 the functions:
@@ -2187,7 +2187,7 @@ export async function describe(sql, principal) {
 }
 ```
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run from `backend/`:
 
@@ -2197,7 +2197,7 @@ node --test tests/auth-service.test.js
 
 Expected: PASS, 22 tests.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/src/services/auth.js backend/tests/auth-service.test.js
@@ -2242,7 +2242,7 @@ Request schemas live at the top of `controllers/auth.js` rather than in a
 `schemas/` directory: there are four of them, they have exactly one consumer,
 and a directory holding fifteen lines is a directory to navigate for nothing.
 
-- [ ] **Step 1: Add `NotImplemented` and `transaction`**
+- [x] **Step 1: Add `NotImplemented` and `transaction`**
 
 In `backend/src/middleware/errors.js`, after the `Conflict` class:
 
@@ -2290,7 +2290,7 @@ describe block:
 
 and add `NotImplemented` to that file's import from `../src/middleware/errors.js`.
 
-- [ ] **Step 2: Write the test harness for a listening app**
+- [x] **Step 2: Write the test harness for a listening app**
 
 Create `backend/tests/helpers/app.js`:
 
@@ -2349,7 +2349,7 @@ export async function withApp(fn) {
 }
 ```
 
-- [ ] **Step 3: Write the failing auth route test**
+- [x] **Step 3: Write the failing auth route test**
 
 Create `backend/tests/auth-routes.test.js`:
 
@@ -2563,7 +2563,7 @@ describe("POST /api/auth/password-reset", () => {
 });
 ```
 
-- [ ] **Step 4: Run it to verify it fails**
+- [x] **Step 4: Run it to verify it fails**
 
 Run from `backend/`:
 
@@ -2574,7 +2574,7 @@ node --test tests/auth-routes.test.js
 Expected: FAIL with `Cannot find module` for `../../src/routes/auth.js` by way
 of `src/app.js`.
 
-- [ ] **Step 5: Write the shared stub handler and the controllers**
+- [x] **Step 5: Write the shared stub handler and the controllers**
 
 Create `backend/src/controllers/not-implemented.js`:
 
@@ -2697,7 +2697,7 @@ export function usersController(sql) {
 }
 ```
 
-- [ ] **Step 6: Write the two routers**
+- [x] **Step 6: Write the two routers**
 
 Create `backend/src/routes/auth.js`:
 
@@ -2751,7 +2751,7 @@ export function usersRouter(sql, config) {
 }
 ```
 
-- [ ] **Step 7: Mount them on the app**
+- [x] **Step 7: Mount them on the app**
 
 Replace `backend/src/app.js` with:
 
@@ -2806,7 +2806,7 @@ In `backend/tests/health.test.js`, the two `createApp(config)` calls become
 `createApp(config, null)` — the health route touches no handle, and passing
 `null` is what proves it.
 
-- [ ] **Step 8: Run the whole suite**
+- [x] **Step 8: Run the whole suite**
 
 Run from `backend/`:
 
@@ -2817,7 +2817,7 @@ npm test
 Expected: PASS. `tests/auth-routes.test.js` contributes 13 tests, and every
 P1 suite still passes.
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add backend/src backend/tests
@@ -2849,7 +2849,7 @@ No stub touches the database, which is why this suite builds the app with a
 `null` handle: if a stub ever grows a query, the test fails loudly rather than
 opening a connection nobody expected.
 
-- [ ] **Step 1: Write the failing stub-route test**
+- [x] **Step 1: Write the failing stub-route test**
 
 Create `backend/tests/stub-routes.test.js`:
 
@@ -3071,7 +3071,7 @@ describe("the guards the routers actually mount", () => {
 });
 ```
 
-- [ ] **Step 2: Run it to verify it fails**
+- [x] **Step 2: Run it to verify it fails**
 
 Run from `backend/`:
 
@@ -3082,7 +3082,7 @@ node --test tests/stub-routes.test.js
 Expected: FAIL — most routes answer 404, because only `/api/auth` and
 `/api/users` are mounted.
 
-- [ ] **Step 3: Write the twelve stub controllers**
+- [x] **Step 3: Write the twelve stub controllers**
 
 Each is a list of named re-exports, so the handler a route refers to has a name
 that says what it will do when it does something.
@@ -3218,7 +3218,7 @@ import { notImplemented } from "./not-implemented.js";
 export const list = notImplemented;
 ```
 
-- [ ] **Step 4: Write the twelve stub routers**
+- [x] **Step 4: Write the twelve stub routers**
 
 Every one of these mounts `authenticate` for the whole router first, then the
 per-route permission guard. `router.get("/")` is the collection root: mounted
@@ -3502,7 +3502,7 @@ export function auditRouter(sql, config) {
 }
 ```
 
-- [ ] **Step 5: Mount all fourteen**
+- [x] **Step 5: Mount all fourteen**
 
 In `backend/src/app.js`, extend the imports and replace the two `app.use`
 mounts with all fourteen, in the order `app/main.py` registers them:
@@ -3545,7 +3545,7 @@ import { workspacesRouter } from "./routes/workspaces.js";
   }
 ```
 
-- [ ] **Step 6: Run the whole suite**
+- [x] **Step 6: Run the whole suite**
 
 Run from `backend/`:
 
@@ -3557,7 +3557,7 @@ Expected: PASS. `tests/stub-routes.test.js` contributes 150 tests — 49 paths
 across three credential states, plus the inventory count and the two guard
 scans.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add backend/src/routes backend/src/controllers backend/src/app.js backend/tests/stub-routes.test.js
@@ -3582,7 +3582,7 @@ is whatever the signed token says, and nothing a caller writes can change it.**
 When P3 adds real domain models, this file is where their cross-tenant cases
 join.
 
-- [ ] **Step 1: Write the tenancy suite**
+- [x] **Step 1: Write the tenancy suite**
 
 Create `backend/tests/tenancy.test.js`:
 
@@ -3776,7 +3776,7 @@ describe("a session that lost its membership", () => {
 });
 ```
 
-- [ ] **Step 2: Run it to verify it passes**
+- [x] **Step 2: Run it to verify it passes**
 
 Run from `backend/`:
 
@@ -3787,7 +3787,7 @@ node --test tests/tenancy.test.js
 Expected: PASS, 7 tests. This suite asserts behaviour Tasks 5 to 8 already
 built, so it passes on the first run — it is a regression net, not a driver.
 
-- [ ] **Step 3: Run the whole suite and start the service by hand**
+- [x] **Step 3: Run the whole suite and start the service by hand**
 
 Run from `backend/`:
 
@@ -3809,7 +3809,7 @@ curl -s localhost:3001/api/invoices -o /dev/null -w '%{http_code}\n'
 Expected: `{"status":"ok","environment":"local"}`; a 201 carrying `tokens` and
 `user`; and `401` for the guarded stub with no token.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add backend/tests/tenancy.test.js
@@ -3854,3 +3854,53 @@ git commit -m "test: assert the workspace comes from the token and nowhere else"
 Not in this plan and not in this phase: the seeder and reseed endpoint, the
 Python deletion, the `vercel.json` reduction, the CI switch (already done in P1)
 and deployment. All P3.
+
+## Status: done (2026-09-16)
+
+All 9 tasks complete. Backend: **350/350 tests passing** (`node:test`, 18
+files, 51 suites) against a local Postgres whose database name contains
+`test`. `npm start` answers `GET /health` with
+`{"status":"ok","environment":"local"}`; `POST /api/auth/signup` answers 201
+with `tokens` and `user`; a guarded stub with no token answers 401 —  all
+confirmed by hand with `curl` against the running process. Frontend:
+`npx tsc --noEmit` exits 0; `npm run build` compiles every route; `npm run
+lint` exits with the same 2 pre-existing errors and 3 pre-existing warnings
+P1 already recorded (`use-mobile.ts`, `theme-toggle.tsx`, plus three
+unrelated warnings) — none in a file this plan touched. Worked in place on
+`main` (user declined a worktree given the port's scope, and asked for
+inline execution in this session rather than dispatched subagents); pushed
+to `origin/main`.
+
+### Deviations from the plan as written
+
+- **Every DB-touching test file needed `after(() => sql.end())`, which the
+  plan's own literal test code omits.** `tests/helpers/database.js` exports
+  a module-level `sql` singleton that nothing closes on its own; every other
+  P1 suite that touches it (`schema.test.js`, `views-*.test.js`,
+  `db.test.js`, `migrate.test.js`) calls `after(() => sql.end())` so
+  `node --test` can exit instead of hanging on the open connection pool.
+  The plan's own code blocks for `models-auth.test.js`, `auth-service.test.js`,
+  `auth-routes.test.js` and `tenancy.test.js` left this out. First hit on
+  Task 4's `models-auth.test.js`: `node --test` hung indefinitely (no
+  output, no exit) rather than failing fast. Root-caused by isolating
+  `withRollback` against a trivial query outside the test runner — it
+  returned instantly when the script called `sql.end()` itself, confirming
+  the hang was an unclosed handle, not a slow or stuck query. Fixed by
+  adding the same `import { sql } from "./helpers/database.js"` +
+  `after(() => sql.end())` pair the existing suites use, and carried that
+  fix into every later task's DB-touching test file from the start. No
+  application code was affected; this is test-harness-only.
+
+No other deviations: every test count, status code and endpoint list in the
+plan text matched what actually ran, on the first attempt, for all nine
+tasks.
+
+### Not verified in-session
+
+CI (`.github/workflows/ci.yml`) has not actually run on GitHub for this
+phase's commits — the backend suite was run locally against the same
+`postgres:16`-shaped local database P1 used, not by watching Actions
+execute the container. Render deployment and the hosted `/health` check are
+out of scope for P2 per the plan's own scope section (P3). `backend/app/`
+(Python) was not re-run; confirmed untouched by `git diff --stat` over
+every commit this phase made, which is what "stays runnable" asks for here.
