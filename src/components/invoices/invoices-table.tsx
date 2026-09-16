@@ -61,6 +61,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { OPEN_STATUSES } from "@/lib/data";
+import { markPaid, markReminded } from "@/lib/data/mutate";
 import { formatDateShort, money, dueLabel } from "@/lib/format";
 import type { Invoice, InvoiceStatus, RiskLevel } from "@/types";
 import { cn } from "@/lib/utils";
@@ -114,17 +115,28 @@ export function InvoicesTable({
   const [rowSelection, setRowSelection] = useState({});
   const [age, setAge] = useState<AgeFilter>("open");
 
+  // A local copy so an action changes what is on screen. The write itself is
+  // not real yet — see the demo banner — but the row must not sit there
+  // unchanged after the person acted on it, or every screen reads as a
+  // screenshot.
+  const [invoiceRows, setInvoiceRows] = useState(invoices);
+
+  const patch = (ids: string[], fn: (invoice: Invoice) => Invoice) =>
+    setInvoiceRows((current) =>
+      current.map((invoice) => (ids.includes(invoice.id) ? fn(invoice) : invoice)),
+    );
+
   // Age is a row-level predicate rather than a column filter: it spans two
   // fields (status and days overdue) and reads better as one control.
   const data = useMemo(() => {
-    if (age === "all") return invoices;
+    if (age === "all") return invoiceRows;
     // "Open" means money the business is owed — a draft is not outstanding,
     // so it stays out of the count the page header quotes.
     if (age === "open")
-      return invoices.filter((i) => OPEN_STATUSES.includes(i.status));
-    if (age === "overdue") return invoices.filter((i) => i.days_overdue > 0);
-    return invoices.filter((i) => i.days_overdue > 60);
-  }, [invoices, age]);
+      return invoiceRows.filter((i) => OPEN_STATUSES.includes(i.status));
+    if (age === "overdue") return invoiceRows.filter((i) => i.days_overdue > 0);
+    return invoiceRows.filter((i) => i.days_overdue > 60);
+  }, [invoiceRows, age]);
 
   const columns = useMemo<ColumnDef<TableFeatures, Invoice>[]>(
     () => [
@@ -317,11 +329,23 @@ export function InvoicesTable({
                   View invoice
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  onClick={() =>
+                  onClick={() => {
+                    patch([row.original.id], (invoice) => markPaid(invoice, today));
+                    toast.success(`${row.original.number} marked as paid`, {
+                      description: `${money(row.original.balance_cents)} settled for ${row.original.customer_name}.`,
+                    });
+                  }}
+                >
+                  <Check className="size-4" />
+                  Mark as paid
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    patch([row.original.id], (invoice) => markReminded(invoice, today));
                     toast.success("Reminder queued", {
                       description: `A reminder for ${row.original.number} will go to ${row.original.customer_name}.`,
-                    })
-                  }
+                    });
+                  }}
                 >
                   <Mail className="size-4" />
                   Send reminder
@@ -482,11 +506,17 @@ export function InvoicesTable({
         <Button
           variant="outline"
           size="sm"
-          onClick={() =>
+          onClick={() => {
+            const count = selected.length;
+            patch(
+              selected.map((r) => r.original.id),
+              (invoice) => markReminded(invoice, today),
+            );
+            table.resetRowSelection();
             toast.success("Reminders queued", {
-              description: `${selected.length} reminders will be sent from your address.`,
-            })
-          }
+              description: `${count} reminders will be sent from your address.`,
+            });
+          }}
         >
           <Mail className="size-3.5" />
           Send reminders
@@ -494,11 +524,20 @@ export function InvoicesTable({
         <Button
           variant="outline"
           size="sm"
-          onClick={() =>
+          onClick={() => {
+            // Read the figure before the rows change: `selectedValue` is
+            // derived from the rows this click is about to settle.
+            const settled = money(selectedValue);
+            const count = selected.length;
+            patch(
+              selected.map((r) => r.original.id),
+              (invoice) => markPaid(invoice, today),
+            );
+            table.resetRowSelection();
             toast.success("Marked as paid", {
-              description: `${selected.length} invoices settled for ${money(selectedValue)}.`,
-            })
-          }
+              description: `${count} invoices settled for ${settled}.`,
+            });
+          }}
         >
           <Check className="size-3.5" />
           Mark paid
