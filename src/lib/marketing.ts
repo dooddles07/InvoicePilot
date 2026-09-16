@@ -8,12 +8,25 @@
  * first.
  */
 
+/**
+ * Where this deployment actually lives.
+ *
+ * `VERCEL_PROJECT_PRODUCTION_URL` is set by Vercel on every deployment and
+ * names the production domain, so a preview build still writes canonicals that
+ * point at production — which is what a canonical is for.
+ */
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL ??
+  (process.env.VERCEL_PROJECT_PRODUCTION_URL
+    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+    : "http://localhost:3000");
+
 export const SITE = {
   name: "InvoicePilot",
   tagline: "Get paid faster. Without chasing invoices.",
   description:
     "InvoicePilot automates accounts receivable, follows up with customers, and gives your team a clear view of cash flow.",
-  url: "https://invoicepilot.com",
+  url: siteUrl,
 } as const;
 
 /* ------------------------------------------------------------------ */
