@@ -3,6 +3,7 @@ import { MobileNav } from "@/components/shell/mobile-nav";
 import { TopBar, type Notification } from "@/components/shell/top-bar";
 import type { CommandTarget } from "@/components/shell/command-menu";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { DemoBanner } from "@/components/invoicepilot/demo-banner";
 import {
   customers,
   getNeedsAttention,
@@ -73,6 +74,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
           customers={commandCustomers}
           notifications={notifications}
         />
+        <DemoBanner workspaceId={session.workspace_id} />
         {/* Bottom padding clears the mobile nav bar. */}
         <div className="min-w-0 flex-1 px-3 pt-4 pb-24 sm:px-5 sm:pt-5 lg:pb-8">
           {children}
