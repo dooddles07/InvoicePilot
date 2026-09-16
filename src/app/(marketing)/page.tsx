@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, ResolvingMetadata } from "next";
 
 import { FaqSection } from "@/components/marketing/faq-section";
 import { PricingPlans } from "@/components/marketing/pricing-plans";
@@ -18,19 +18,30 @@ import { StructuredData } from "@/components/marketing/structured-data";
 import { Reveal } from "@/components/motion/reveal";
 import { SITE } from "@/lib/marketing";
 
-export const metadata: Metadata = {
-  title: {
-    absolute: "InvoicePilot — Get paid faster. Without chasing invoices.",
-  },
-  description: SITE.description,
-  alternates: { canonical: "/" },
-  openGraph: {
-    title: "InvoicePilot — Get paid faster. Without chasing invoices.",
+export async function generateMetadata(
+  _props: unknown,
+  parent: ResolvingMetadata,
+): Promise<Metadata> {
+  // A static `openGraph` object here would replace the parent's, not merge
+  // with it — the root's file-convention opengraph-image.tsx is inherited as
+  // part of that parent openGraph, so it has to be spread in explicitly or
+  // og:image quietly disappears from the one page most likely to be shared.
+  const { openGraph } = await parent;
+  return {
+    title: {
+      absolute: "InvoicePilot — Get paid faster. Without chasing invoices.",
+    },
     description: SITE.description,
-    type: "website",
-    url: SITE.url,
-  },
-};
+    alternates: { canonical: "/" },
+    openGraph: {
+      ...openGraph,
+      title: "InvoicePilot — Get paid faster. Without chasing invoices.",
+      description: SITE.description,
+      type: "website",
+      url: SITE.url,
+    },
+  };
+}
 
 export default function LandingPage() {
   return (
