@@ -55,4 +55,29 @@ describe("loadConfig", () => {
     // global: a test must be able to describe the whole environment.
     assert.throws(() => loadConfig({}), /SECRET_KEY is not set/);
   });
+
+  it("reads the admin token and the demo workspace id", () => {
+    const config = loadConfig({
+      ...valid,
+      ADMIN_TOKEN: "t".repeat(32),
+      DEMO_WORKSPACE_ID: "3f1d2c80-0000-4000-8000-000000000001",
+    });
+    assert.equal(config.adminToken, "t".repeat(32));
+    assert.equal(config.demoWorkspaceId, "3f1d2c80-0000-4000-8000-000000000001");
+  });
+
+  it("leaves both null when unset, and does not throw", () => {
+    // The reseed endpoint is the only caller. A deployment without a demo
+    // workspace should still boot; the endpoint refuses instead.
+    const config = loadConfig(valid);
+    assert.equal(config.adminToken, null);
+    assert.equal(config.demoWorkspaceId, null);
+  });
+
+  it("refuses an admin token too short to be worth having", () => {
+    assert.throws(
+      () => loadConfig({ ...valid, ADMIN_TOKEN: "t".repeat(31) }),
+      /ADMIN_TOKEN must be at least 32 characters/,
+    );
+  });
 });

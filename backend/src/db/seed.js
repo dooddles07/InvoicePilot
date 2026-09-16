@@ -27,8 +27,15 @@
  *   nothing downstream reads an individual item amount.
  */
 import { randomUUID } from "node:crypto";
+import { parseArgs } from "node:util";
+import { fileURLToPath } from "node:url";
 
+import { loadConfig } from "../config.js";
+import { hashPassword } from "../lib/security.js";
+import { findUserByEmail, insertUser } from "../models/auth.js";
 import { insertEmailTemplates } from "../models/notifications.js";
+import { findWorkspaceById } from "../models/workspaces.js";
+import { getSql, transaction } from "./index.js";
 
 export const SEED = 0x0001_9f0c;
 export const INVOICE_COUNT = 460;
@@ -427,4 +434,66 @@ export async function seedDemoWorkspace(
     payments: payments.length,
     events: events.length,
   };
+}
+
+/**
+ *   npm run seed -- --email demo@example.com --password "…"
+ *
+ * Commits, unlike the test fixture. Refuses to seed over a workspace that
+ * already exists: replacing one is what POST /api/admin/reseed is for, and a
+ * command that silently doubled the ledger would be discovered as a chart.
+ */
+async function main() {
+  const { values } = parseArgs({
+    options: {
+      email: { type: "string" },
+      password: { type: "string" },
+      name: { type: "string", default: "Alex Mercer" },
+      role: { type: "string", default: "admin" },
+    },
+  });
+
+  if (!values.email || !values.password) {
+    throw new Error("--email and --password are required");
+  }
+
+  const config = loadConfig();
+  const workspaceId = config.demoWorkspaceId ?? randomUUID();
+  const sql = getSql(config.databaseUrl);
+
+  try {
+    const counts = await transaction(sql, async (tx) => {
+      if (await findWorkspaceById(tx, workspaceId)) {
+        throw new Error(
+          `workspace ${workspaceId} already exists; POST /api/admin/reseed replaces it`,
+        );
+      }
+      const existing = await findUserByEmail(tx, values.email);
+      const user =
+        existing ??
+        (await insertUser(tx, {
+          id: randomUUID(),
+          email: values.email,
+          fullName: values.name,
+          passwordHash: await hashPassword(values.password),
+        }));
+      return seedDemoWorkspace(tx, {
+        workspaceId,
+        ownerUserId: user.id,
+        role: values.role,
+      });
+    });
+
+    console.log(`seeded ${workspaceId}: ${JSON.stringify(counts)}`);
+    if (!config.demoWorkspaceId) {
+      console.log(`set DEMO_WORKSPACE_ID=${workspaceId} on both services`);
+    }
+  } finally {
+    await sql.end();
+  }
+}
+
+// Only when run as a command. Importing this module must open no connection.
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  await main();
 }

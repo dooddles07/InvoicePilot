@@ -10,6 +10,7 @@
  * stops the process rather than falling back to something guessable.
  */
 const SECRET_KEY_MIN_LENGTH = 32;
+const ADMIN_TOKEN_MIN_LENGTH = 32;
 
 export function loadConfig(env = process.env) {
   const secretKey = env.SECRET_KEY;
@@ -23,10 +24,22 @@ export function loadConfig(env = process.env) {
   const databaseUrl = env.DATABASE_URL;
   if (!databaseUrl) throw new Error("DATABASE_URL is not set");
 
+  // Optional: only the reseed endpoint reads these, and a deployment without a
+  // demo workspace should still boot. Short is refused rather than accepted,
+  // because this token is the only thing standing in front of a delete.
+  const adminToken = env.ADMIN_TOKEN ?? null;
+  if (adminToken !== null && adminToken.length < ADMIN_TOKEN_MIN_LENGTH) {
+    throw new Error(
+      `ADMIN_TOKEN must be at least ${ADMIN_TOKEN_MIN_LENGTH} characters`,
+    );
+  }
+
   return {
     environment: env.NODE_ENV ?? "local",
     port: Number(env.PORT ?? 3001),
     databaseUrl,
     secretKey,
+    adminToken,
+    demoWorkspaceId: env.DEMO_WORKSPACE_ID ?? null,
   };
 }
