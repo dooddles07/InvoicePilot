@@ -20,7 +20,7 @@ export const sessionUserSchema = z.object({
 export type SessionUser = z.infer<typeof sessionUserSchema>;
 
 /**
- * Who is signed in, according to FastAPI.
+ * Who is signed in, according to the API.
  *
  * The DAL does not verify the JWT itself: that would mean sharing SECRET_KEY
  * with Next for no gain. It forwards the token and lets the service that

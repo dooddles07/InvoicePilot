@@ -12,7 +12,7 @@ import {
  * Two jobs, and deliberately no third.
  *
  * 1. The optimistic check: is there a session cookie at all. This is a
- *    redirect convenience, never the authorisation — FastAPI verifies every
+ *    redirect convenience, never the authorisation — the API verifies every
  *    request, and a forged cookie gets a 401 from the DAL regardless.
  * 2. Refresh rotation. Refreshing writes cookies, and Next does not allow
  *    cookie writes during a Server Component render, so this is the only place

@@ -1,7 +1,7 @@
 /**
  * Domain types.
  *
- * These mirror the FastAPI Pydantic schemas field-for-field (snake_case
+ * These mirror the API's response shapes field-for-field (snake_case
  * included) so that replacing the local fixtures with `fetch()` is a swap of
  * the data source, not a rewrite of every component. Monetary values are
  * integer cents. Dates are ISO-8601 strings.

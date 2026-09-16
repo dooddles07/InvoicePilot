@@ -6,7 +6,7 @@ import type { ZodType } from "zod";
 import { readAccessToken } from "@/lib/auth/cookies";
 
 /**
- * The only place in the frontend that builds a URL to FastAPI.
+ * The only place in the frontend that builds a URL to the API.
  *
  * Pages and actions import functions from `src/lib/api/`; none of them knows a
  * path. That is what keeps the API surface changeable without a grep across
