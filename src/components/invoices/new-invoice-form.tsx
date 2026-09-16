@@ -94,6 +94,9 @@ export function NewInvoiceForm({
   };
 
   function onSubmit(values: Values) {
+    // ponytail: the created invoice does not appear in the list — the ledger is
+    // a module-level fixture and nothing survives the navigation. Closed by the
+    // backend write path, not by a client-side store built to be deleted.
     toast.success("Invoice created", {
       description: `${money(totalCents)} to ${
         customers.find((c) => c.id === values.customer_id)?.name ?? "customer"

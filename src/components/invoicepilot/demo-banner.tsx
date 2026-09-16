@@ -17,8 +17,9 @@ export function DemoBanner({ workspaceId }: { workspaceId: string }) {
     <div className="border-brand/25 bg-brand-muted text-brand flex items-center gap-2 border-b px-4 py-1.5 text-caption">
       <Info className="size-3.5 shrink-0" aria-hidden />
       <p>
-        Demo workspace — shared with every visitor, and reset daily at 04:00
-        UTC. Everything you change here is real until then.
+        Demo workspace — shared with every visitor and rebuilt daily at 04:00
+        UTC. Changes you make here live in this browser session; sign-in,
+        sessions and the daily rebuild are real.
       </p>
     </div>
   );
