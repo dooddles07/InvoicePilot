@@ -1,8 +1,20 @@
 /**
  * Workspaces. Owns: workspaces, workspace_members.
  *
- * Empty until the workspaces endpoints are implemented. Every query function
- * takes the principal's workspace id as its first argument and builds its
- * statement through the shared scoping helper, so no query reaches a tenant
- * table unscoped.
+ * The member-facing queries live in models/auth.js while auth is the only
+ * caller. They move here when the workspaces routes stop returning 501.
  */
+
+export async function insertWorkspace(sql, workspace) {
+  const [row] = await sql`
+    INSERT INTO workspaces (id, name, slug)
+    VALUES (${workspace.id}, ${workspace.name}, ${workspace.slug})
+    RETURNING id, name, slug
+  `;
+  return row;
+}
+
+export async function findWorkspaceById(sql, id) {
+  const [row] = await sql`SELECT id, name, slug FROM workspaces WHERE id = ${id}`;
+  return row;
+}
