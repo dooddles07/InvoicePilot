@@ -1,5 +1,6 @@
 import { createApp } from "./app.js";
 import { loadConfig } from "./config.js";
+import { getSql } from "./db/index.js";
 import { applyMigrations } from "./db/migrate.js";
 
 /**
@@ -14,6 +15,6 @@ console.log(
   applied.length ? `applied: ${applied.join(", ")}` : "schema up to date",
 );
 
-createApp(config).listen(config.port, () => {
+createApp(config, getSql(config.databaseUrl)).listen(config.port, () => {
   console.log(`listening on ${config.port} (${config.environment})`);
 });

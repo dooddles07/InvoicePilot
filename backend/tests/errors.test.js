@@ -6,6 +6,7 @@ import {
   Conflict,
   DomainError,
   NotFound,
+  NotImplemented,
   PermissionDenied,
   ValidationFailed,
   errorHandler,
@@ -46,6 +47,14 @@ describe("the domain error hierarchy", () => {
 
   it("takes an overriding detail", () => {
     assert.equal(new Conflict("That email is taken").detail, "That email is taken");
+  });
+
+  it("carries a 501 for a route with nothing behind it", () => {
+    assert.equal(new NotImplemented().status, 501);
+    assert.equal(
+      new NotImplemented("Not implemented: nothing yet.").detail,
+      "Not implemented: nothing yet.",
+    );
   });
 
   it("fixes the detail of an authentication failure", () => {

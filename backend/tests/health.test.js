@@ -14,7 +14,7 @@ let server;
 let origin;
 
 before(async () => {
-  server = createApp(config).listen(0);
+  server = createApp(config, null).listen(0);
   await new Promise((resolve) => server.once("listening", resolve));
   origin = `http://127.0.0.1:${server.address().port}`;
 });

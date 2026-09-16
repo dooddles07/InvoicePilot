@@ -47,3 +47,16 @@ export function getSql(connectionString = process.env.DATABASE_URL) {
   client ??= createClient(connectionString);
   return client;
 }
+
+/**
+ * Run `fn` in a transaction -- or in a savepoint, when the handle already is
+ * one.
+ *
+ * postgres.js gives a transaction callback a handle carrying .savepoint and no
+ * .begin (src/index.js:250-253), so a controller that called sql.begin would
+ * throw the moment a test handed it the rollback transaction. One line here is
+ * what lets the controller read the same either way.
+ */
+export function transaction(sql, fn) {
+  return sql.begin ? sql.begin(fn) : sql.savepoint(fn);
+}

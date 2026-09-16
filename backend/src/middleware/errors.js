@@ -56,6 +56,16 @@ export class Conflict extends DomainError {
   static defaultDetail = "Already exists";
 }
 
+/**
+ * A route that exists, is guarded, and has no service behind it yet. Fifty of
+ * them shipped with this port so the endpoint surface matches the Python
+ * service on the day it is deleted.
+ */
+export class NotImplemented extends DomainError {
+  static status = 501;
+  static defaultDetail = "Not implemented";
+}
+
 export function errorHandler(error, request, response, next) {
   // Express cannot change a response it has already started sending, so a late
   // error goes to the default handler, which closes the connection.
