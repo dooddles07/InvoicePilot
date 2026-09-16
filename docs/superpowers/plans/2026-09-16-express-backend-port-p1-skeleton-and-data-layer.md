@@ -2104,3 +2104,39 @@ git commit -m "refactor: drop the TypeScript backend layer and split CI in two"
 - `npx tsc --noEmit` and `npm run build` pass at the repository root.
 - No `.ts` file remains outside `src/` at the root, and no TypeScript file imports a database driver.
 - `backend/app/` is untouched and still runs. It is deleted in P3.
+
+## Status: done (2026-09-16)
+
+All 10 tasks complete. Backend: **55/55 tests passing** (`node:test`, 10
+files, 17 suites) against a local Postgres whose database name contains
+`test`. `npm start` migrates and answers `GET /health` with
+`{"status":"ok","environment":"local"}`, confirmed by hand with `curl`.
+Frontend: `npx tsc --noEmit` exits 0; `npm run build` compiles all 139 routes;
+`npm run lint` exits with the same 2 pre-existing errors and 3 pre-existing
+warnings the 2026-09-09 auth-and-session plan already recorded
+(`use-mobile.ts`, `theme-toggle.tsx`, plus three unrelated warnings) — none in
+a file this plan touched. Worked in place on `main` (user declined a worktree
+given the port's scope); pushed to `origin/main`.
+
+### Not verified in-session
+
+The new two-job `.github/workflows/ci.yml` has not actually run on GitHub —
+its `backend` job was validated by reproducing its steps locally (`npm ci`
+equivalent via `npm install`, `npm test` against a local `postgres:16`-shaped
+database) rather than by watching Actions execute the container. Render
+deployment itself is out of scope for P1 per the plan's build order; `/health`
+was verified only against a local process, not a hosted one.
+
+### Deviations from the plan as written
+
+- **Task 10 Step 2 — one `git rm` became two.** The plan's
+  `git rm -r src/server drizzle` was written as a single command, but `git rm`
+  refuses the whole invocation if any pathspec matches nothing, and Task 2's
+  `git mv` had already emptied `drizzle/` of its two SQL files — git tracks no
+  empty directories, so `drizzle` matched nothing. Ran `git rm -r src/server`
+  alone, then `rmdir drizzle` to remove the empty directory from disk. No
+  files were lost; verified with `git diff <pre-rewrite-ref> HEAD --stat`
+  showing zero content differences beyond the intended deletions.
+
+No other deviations: every constraint name, test count, and line count in the
+plan text matched what actually ran, on the first attempt, for all ten tasks.
