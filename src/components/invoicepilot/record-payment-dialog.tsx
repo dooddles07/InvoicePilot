@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Banknote } from "lucide-react";
-import { useState, type ReactElement } from "react";
+import { useEffect, useState, type ReactElement } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -79,6 +79,22 @@ export function RecordPaymentDialog({
       reference: "",
     },
   });
+
+  // react-hook-form freezes defaultValues at mount, but this dialog stays
+  // mounted (just hidden) across opens as its own balance changes underneath
+  // it — reopening after a partial payment must show what is owed *now*, not
+  // what was owed the first time this dialog ever rendered.
+  useEffect(() => {
+    if (open) {
+      form.reset({
+        amount: (balance / 100).toFixed(2),
+        method: "bank_transfer",
+        received_on: today,
+        reference: "",
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   const amountCents = Math.round(Number(form.watch("amount") || 0) * 100);
   const remaining = Math.max(0, balance - amountCents);
