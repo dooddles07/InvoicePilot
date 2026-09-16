@@ -31,6 +31,12 @@ export default function LoginPage() {
             Create a workspace
           </Link>
         </p>
+        <p>
+          Just looking?{" "}
+          <Link href="/demo" className="text-brand hover:underline">
+            Open the demo workspace
+          </Link>
+        </p>
       </div>
     </div>
   );

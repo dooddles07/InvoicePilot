@@ -48,27 +48,27 @@ export function Hero() {
           </p>
 
           <div className="flex flex-wrap items-center gap-2">
-            <LinkButton size="lg" href="/signup">
-              Start free
+            <LinkButton size="lg" href="/demo">
+              View live demo
               <ArrowRight className="size-4" />
             </LinkButton>
-            <LinkButton size="lg" variant="outline" href="/signup?demo=1">
-              Book a demo
+            <LinkButton size="lg" variant="outline" href="/signup">
+              Start free
             </LinkButton>
           </div>
 
           <p className="text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-1 text-caption">
             <span className="flex items-center gap-1.5">
               <CheckCircle2 className="text-success size-3.5" aria-hidden />
-              14-day trial
+              No signup
             </span>
             <span className="flex items-center gap-1.5">
               <CheckCircle2 className="text-success size-3.5" aria-hidden />
-              No card required
+              Live data
             </span>
             <span className="flex items-center gap-1.5">
               <CheckCircle2 className="text-success size-3.5" aria-hidden />
-              Live the same morning
+              Resets daily
             </span>
           </p>
         </Reveal>

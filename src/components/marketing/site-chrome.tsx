@@ -52,10 +52,12 @@ export function SiteHeader() {
           >
             Sign in
           </LinkButton>
-          {/* The primary CTA lives in the nav as well as after the metrics —
-              a visitor who is already convinced should not have to scroll. */}
-          <LinkButton size="sm" href="/signup">
-            Start free
+          {/* The primary CTA lives in the nav as well as after the metrics — a
+              visitor who is already convinced should not have to scroll. The
+              demo outranks signup here: it is the lower-friction action and it
+              is the one that shows the product. */}
+          <LinkButton size="sm" href="/demo">
+            View live demo
           </LinkButton>
           <Button
             variant="ghost"
@@ -117,7 +119,7 @@ const FOOTER_GROUPS = [
       { href: "/faq", label: "FAQ" },
       { href: "/login", label: "Sign in" },
       { href: "/signup", label: "Start free" },
-      { href: "/dashboard", label: "Live demo" },
+      { href: "/demo", label: "Live demo" },
     ],
   },
   {
