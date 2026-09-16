@@ -1,0 +1,215 @@
+/**
+ * Every endpoint that exists and does nothing yet.
+ *
+ * Their only assertion is the one spec section 13 asks for: the status and the
+ * detail string match the Python service they replace. The app is built with a
+ * null database handle, so a stub that grew a query would fail here rather
+ * than open a connection nobody expected.
+ */
+import assert from "node:assert/strict";
+import { readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
+import { after, before, describe, it } from "node:test";
+
+import { createApp } from "../src/app.js";
+import { ROLE_PERMISSIONS, issueAccessToken, makePrincipal } from "../src/lib/security.js";
+import { TEST_CONFIG } from "./helpers/app.js";
+
+const DETAIL = "Not implemented: the service layer for this route is not wired yet.";
+
+// method, path, and the permission the route is guarded by: null for a route
+// that needs only a bearer token, "anonymous" for one guarded by nothing.
+const STUBS = [
+  ["POST", "/api/auth/password-reset", "anonymous"],
+  ["PATCH", "/api/users/me", null],
+
+  ["GET", "/api/workspaces", null],
+  ["POST", "/api/workspaces", null],
+  ["GET", "/api/workspaces/ws-1", null],
+  ["PATCH", "/api/workspaces/ws-1", "workspace:write"],
+  ["GET", "/api/workspaces/ws-1/members", "team:write"],
+  ["POST", "/api/workspaces/ws-1/members", "team:write"],
+
+  ["GET", "/api/customers", "customer:read"],
+  ["POST", "/api/customers", "customer:write"],
+  ["GET", "/api/customers/c-1", "customer:read"],
+  ["PATCH", "/api/customers/c-1", "customer:write"],
+  ["GET", "/api/customers/c-1/behaviour", "customer:read"],
+
+  ["GET", "/api/invoices", "invoice:read"],
+  ["POST", "/api/invoices", "invoice:write"],
+  ["GET", "/api/invoices/i-1", "invoice:read"],
+  ["PATCH", "/api/invoices/i-1", "invoice:write"],
+  ["POST", "/api/invoices/i-1/send", "invoice:write"],
+  ["GET", "/api/invoices/i-1/events", "invoice:read"],
+
+  ["GET", "/api/payments", "payment:read"],
+  ["POST", "/api/payments", "payment:write"],
+
+  ["GET", "/api/collections/pipeline", "invoice:read"],
+  ["GET", "/api/collections/queue", "invoice:read"],
+  ["POST", "/api/collections/reminders", "invoice:write"],
+
+  ["GET", "/api/automations", "automation:read"],
+  ["POST", "/api/automations", "automation:write"],
+  ["GET", "/api/automations/a-1", "automation:read"],
+  ["PATCH", "/api/automations/a-1", "automation:write"],
+  ["GET", "/api/automations/a-1/runs", "automation:read"],
+
+  ["GET", "/api/notifications", null],
+  ["POST", "/api/notifications/read", null],
+  ["GET", "/api/notifications/preferences", null],
+  ["PUT", "/api/notifications/preferences", null],
+
+  ["GET", "/api/reports/aging", "report:read"],
+  ["GET", "/api/reports/cash-flow", "report:read"],
+  ["GET", "/api/reports/collection-rate", "report:read"],
+  ["GET", "/api/reports/customer-risk", "report:read"],
+  ["GET", "/api/reports/days-to-payment", "report:read"],
+
+  ["GET", "/api/integrations", "integration:read"],
+  ["POST", "/api/integrations/stripe/connect", "integration:write"],
+  ["DELETE", "/api/integrations/stripe", "integration:write"],
+  ["POST", "/api/integrations/stripe/sync", "integration:write"],
+
+  ["POST", "/api/ai/analyze", "report:read"],
+  ["POST", "/api/ai/draft-reminder", "invoice:read"],
+  ["POST", "/api/ai/ask", "report:read"],
+
+  ["GET", "/api/billing/subscription", null],
+  ["POST", "/api/billing/subscription", "billing:write"],
+  ["GET", "/api/billing/invoices", null],
+
+  ["GET", "/api/audit", "audit:read"],
+];
+
+let server;
+let origin;
+
+before(async () => {
+  server = createApp(TEST_CONFIG, null).listen(0);
+  await new Promise((resolve) => server.once("listening", resolve));
+  origin = `http://127.0.0.1:${server.address().port}`;
+});
+
+after(async () => {
+  server.closeAllConnections();
+  await new Promise((resolve) => server.close(resolve));
+});
+
+async function tokenFor(role) {
+  return issueAccessToken(
+    makePrincipal(
+      "11111111-1111-4111-8111-111111111111",
+      "22222222-2222-4222-8222-222222222222",
+      role,
+    ),
+    TEST_CONFIG.secretKey,
+  );
+}
+
+function send(method, path, token) {
+  return fetch(`${origin}${path}`, {
+    method,
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: ["POST", "PATCH", "PUT"].includes(method) ? "{}" : undefined,
+  });
+}
+
+describe("the endpoint inventory", () => {
+  it("is 49 stubs, which with 6 real endpoints is the 55 the spec counts", () => {
+    assert.equal(STUBS.length, 49);
+  });
+});
+
+describe("with no credentials", () => {
+  for (const [method, path, permission] of STUBS) {
+    const expected = permission === "anonymous" ? 501 : 401;
+    it(`${method} ${path} answers ${expected}`, async () => {
+      const response = await send(method, path, null);
+      assert.equal(response.status, expected);
+    });
+  }
+});
+
+describe("as an owner", () => {
+  for (const [method, path] of STUBS) {
+    it(`${method} ${path} answers 501`, async () => {
+      const response = await send(method, path, await tokenFor("owner"));
+      assert.equal(response.status, 501);
+      const body = await response.json();
+      assert.equal(
+        body.detail,
+        path.endsWith("/password-reset")
+          ? "Not implemented: password reset needs the outbox from plan 4."
+          : DETAIL,
+      );
+    });
+  }
+});
+
+describe("as a viewer", () => {
+  for (const [method, path, permission] of STUBS) {
+    const granted =
+      permission === "anonymous" ||
+      permission === null ||
+      ROLE_PERMISSIONS.viewer.includes(permission);
+    const expected = granted ? 501 : 403;
+
+    it(`${method} ${path} answers ${expected}`, async () => {
+      const response = await send(method, path, await tokenFor("viewer"));
+      assert.equal(response.status, expected);
+      if (!granted) {
+        assert.equal((await response.json()).detail, `Requires ${permission}`);
+      }
+    });
+  }
+});
+
+describe("the guards the routers actually mount", () => {
+  it("name only permissions a role can hold", () => {
+    // The reverse of the matrix test: a route guarded by a string that appears
+    // in no grant list is a permanent 403 nobody can grant away.
+    const directory = join(import.meta.dirname, "..", "src", "routes");
+    const guarded = new Set();
+    for (const file of readdirSync(directory)) {
+      const source = readFileSync(join(directory, file), "utf8");
+      for (const [, permission] of source.matchAll(
+        /requirePermission\("([^"]+)"\)/g,
+      )) {
+        guarded.add(permission);
+      }
+    }
+
+    const grantable = new Set(Object.values(ROLE_PERMISSIONS).flat());
+    const ungrantable = [...guarded].filter(
+      (permission) => !grantable.has(permission),
+    );
+    // billing:write is the known wart: no role enumerates it, so only owner
+    // reaches it through the wildcard. It is grantable, and it is listed here
+    // because the assertion below would otherwise hide a real typo.
+    assert.deepEqual(ungrantable, ["billing:write"]);
+  });
+
+  it("guards every permission the routers claim to, and no more", () => {
+    const directory = join(import.meta.dirname, "..", "src", "routes");
+    const guarded = new Set();
+    for (const file of readdirSync(directory)) {
+      for (const [, permission] of readFileSync(
+        join(directory, file),
+        "utf8",
+      ).matchAll(/requirePermission\("([^"]+)"\)/g)) {
+        guarded.add(permission);
+      }
+    }
+    const fromTable = new Set(
+      STUBS.map(([, , permission]) => permission).filter(
+        (permission) => permission && permission !== "anonymous",
+      ),
+    );
+    assert.deepEqual([...guarded].sort(), [...fromTable].sort());
+  });
+});

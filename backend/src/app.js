@@ -1,8 +1,20 @@
 import express from "express";
 
 import { errorHandler } from "./middleware/errors.js";
+import { aiRouter } from "./routes/ai.js";
+import { auditRouter } from "./routes/audit.js";
 import { authRouter } from "./routes/auth.js";
+import { automationsRouter } from "./routes/automations.js";
+import { billingRouter } from "./routes/billing.js";
+import { collectionsRouter } from "./routes/collections.js";
+import { customersRouter } from "./routes/customers.js";
+import { integrationsRouter } from "./routes/integrations.js";
+import { invoicesRouter } from "./routes/invoices.js";
+import { notificationsRouter } from "./routes/notifications.js";
+import { paymentsRouter } from "./routes/payments.js";
+import { reportsRouter } from "./routes/reports.js";
 import { usersRouter } from "./routes/users.js";
+import { workspacesRouter } from "./routes/workspaces.js";
 
 /**
  * No CORS middleware. The browser never calls this service: every request
@@ -21,8 +33,24 @@ export function createApp(config, sql) {
     response.json({ status: "ok", environment: config.environment });
   });
 
-  app.use("/api/auth", authRouter(sql, config));
-  app.use("/api/users", usersRouter(sql, config));
+  for (const [path, router] of [
+    ["/api/auth", authRouter],
+    ["/api/users", usersRouter],
+    ["/api/workspaces", workspacesRouter],
+    ["/api/customers", customersRouter],
+    ["/api/invoices", invoicesRouter],
+    ["/api/payments", paymentsRouter],
+    ["/api/collections", collectionsRouter],
+    ["/api/automations", automationsRouter],
+    ["/api/notifications", notificationsRouter],
+    ["/api/reports", reportsRouter],
+    ["/api/integrations", integrationsRouter],
+    ["/api/ai", aiRouter],
+    ["/api/billing", billingRouter],
+    ["/api/audit", auditRouter],
+  ]) {
+    app.use(path, router(sql, config));
+  }
 
   // Last. Express 5 routes a rejected handler promise here on its own, so no
   // controller needs its own try/catch.
