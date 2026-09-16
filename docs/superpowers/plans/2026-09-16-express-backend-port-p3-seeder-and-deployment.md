@@ -125,7 +125,7 @@ both go.
 - Consumes: nothing from earlier tasks.
 - Produces: `SEED` (number), `INVOICE_COUNT` (460), `CUSTOMER_SEEDS` (frozen array of 40 `{name, industry, contact, domain, reliability, size, terms, trend}`), `LINE_ITEMS`, `METHODS`, `EVENT_SUMMARY`, `mulberry32(seed) -> () => number`, `makeRng(seed) -> {next, pick, between, intBetween}`, `anchorDate(today?) -> Date`, `addDays(date, days) -> Date`, `isoDate(date) -> "YYYY-MM-DD"`, `dayDiff(a, b) -> number`, `splitIntoItems(amountCents, count) -> number[]`, `buildDrafts(rng, now) -> Draft[]` where a `Draft` is `{seed, customerIndex, issue, due, paid, amountCents, paidCents, status}`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `backend/tests/seed-generator.test.js`:
 
@@ -297,12 +297,12 @@ describe("isoDate", () => {
 });
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run (from `backend/`): `node --test tests/seed-generator.test.js`
 Expected: FAIL — `Cannot find module` for `../src/db/seed.js`.
 
-- [ ] **Step 3: Write the generator**
+- [x] **Step 3: Write the generator**
 
 Create `backend/src/db/seed.js`:
 
@@ -540,12 +540,12 @@ export function buildDrafts(rng, now) {
 }
 ```
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `node --test tests/seed-generator.test.js`
 Expected: PASS, every test.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/src/db/seed.js backend/tests/seed-generator.test.js
@@ -570,7 +570,7 @@ in a plausible-looking way.
 - Consumes: Task 1's generator; `insertEmailTemplates(sql, workspaceId)` from `src/models/notifications.js`.
 - Produces: `slugFor(workspaceId) -> string`, `seedDemoWorkspace(sql, {workspaceId, ownerUserId, role?, now?}) -> Promise<{customers, invoices, items, payments, events}>`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `backend/tests/seed.test.js`:
 
@@ -784,12 +784,12 @@ describe("the ledger invariants", () => {
 });
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `npm test -- tests/seed.test.js` (or `node --test tests/seed.test.js` when the schema is already migrated)
 Expected: FAIL — `seedDemoWorkspace is not a function` / `not exported`.
 
-- [ ] **Step 3: Write the writer**
+- [x] **Step 3: Write the writer**
 
 Append to `backend/src/db/seed.js` (imports go at the top of the file):
 
@@ -997,17 +997,17 @@ export async function seedDemoWorkspace(
 }
 ```
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `npm test -- tests/seed.test.js`
 Expected: PASS — six `seedDemoWorkspace` tests and both invariant tests.
 
-- [ ] **Step 5: Run the whole suite**
+- [x] **Step 5: Run the whole suite**
 
 Run: `npm test`
 Expected: PASS — every P1 and P2 suite plus the two new files.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add backend/src/db/seed.js backend/tests/seed.test.js
@@ -1031,7 +1031,7 @@ parser is added.
 - Consumes: `seedDemoWorkspace` from Task 2; `hashPassword` from `src/lib/security.js`; `insertUser`, `findUserByEmail` from `src/models/auth.js`; `findWorkspaceById` from `src/models/workspaces.js`; `loadConfig`, `getSql`, `transaction`.
 - Produces: `config.adminToken` (string or null), `config.demoWorkspaceId` (string or null), and the `npm run seed` command.
 
-- [ ] **Step 1: Write the failing config test**
+- [x] **Step 1: Write the failing config test**
 
 Append to `backend/tests/config.test.js`, inside the existing `describe("loadConfig")`:
 
@@ -1062,12 +1062,12 @@ Append to `backend/tests/config.test.js`, inside the existing `describe("loadCon
   });
 ```
 
-- [ ] **Step 2: Run it to verify it fails**
+- [x] **Step 2: Run it to verify it fails**
 
 Run: `node --test tests/config.test.js`
 Expected: FAIL — `config.adminToken` is `undefined`, not `null`.
 
-- [ ] **Step 3: Extend the configuration**
+- [x] **Step 3: Extend the configuration**
 
 In `backend/src/config.js`, add the constant and the two reads:
 
@@ -1096,12 +1096,12 @@ and extend the returned object:
     demoWorkspaceId: env.DEMO_WORKSPACE_ID ?? null,
 ```
 
-- [ ] **Step 4: Run the config test to verify it passes**
+- [x] **Step 4: Run the config test to verify it passes**
 
 Run: `node --test tests/config.test.js`
 Expected: PASS.
 
-- [ ] **Step 5: Write the CLI**
+- [x] **Step 5: Write the CLI**
 
 At the top of `backend/src/db/seed.js`, add to the imports:
 
@@ -1182,7 +1182,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
 }
 ```
 
-- [ ] **Step 6: Add the script and document the variables**
+- [x] **Step 6: Add the script and document the variables**
 
 In `backend/package.json`, add to `scripts`:
 
@@ -1202,7 +1202,7 @@ ADMIN_TOKEN="replace-me-with-at-least-thirty-two-characters"
 DEMO_WORKSPACE_ID=""
 ```
 
-- [ ] **Step 7: Run the command against a local database**
+- [x] **Step 7: Run the command against a local database**
 
 Run (from `backend/`, with `DATABASE_URL` pointing at a scratch database and
 `SECRET_KEY` set):
@@ -1215,13 +1215,13 @@ Expected: `seeded <uuid>: {"customers":40,"invoices":460,…}` followed by the
 `set DEMO_WORKSPACE_ID=…` line. Running it a second time with that
 `DEMO_WORKSPACE_ID` exported fails with `workspace … already exists`.
 
-- [ ] **Step 8: Run the whole suite**
+- [x] **Step 8: Run the whole suite**
 
 Run: `npm test`
 Expected: PASS — importing `seed.js` still opens no connection, so every suite
 is unaffected.
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add backend/src/db/seed.js backend/src/config.js backend/package.json backend/.env.example backend/tests/config.test.js
@@ -1248,7 +1248,7 @@ hostname, which is why this task does not simplify the other two.
 - Consumes: `seedDemoWorkspace` (Task 2), `config.adminToken` and `config.demoWorkspaceId` (Task 3), `transaction` from `src/db/index.js`, `NotFound`/`AuthenticationFailed` from `src/middleware/errors.js`.
 - Produces: `requireAdminToken(config)` middleware, `adminRouter(sql, config)`, `adminController(sql, config).reseed`, `findFirstMember(sql, workspaceId) -> {user_id, role} | undefined`, `deleteWorkspaceData(sql, workspaceId) -> Promise<void>`. Response body: `{workspace_id, customers, invoices, items, payments, events}`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 First extend the harness so a test can pass its own config and headers. In
 `backend/tests/helpers/app.js`, change the two signatures:
@@ -1485,13 +1485,13 @@ describe("deleteWorkspaceData", () => {
 });
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `npm test -- tests/admin-reseed.test.js`
 Expected: FAIL — `/api/admin/reseed` answers 404 from Express's own handler
 (no router mounted), so the first assertion of 401 fails.
 
-- [ ] **Step 3: Write the token guard**
+- [x] **Step 3: Write the token guard**
 
 Create `backend/src/middleware/admin-token.js`:
 
@@ -1532,7 +1532,7 @@ export function requireAdminToken(config) {
 }
 ```
 
-- [ ] **Step 4: Write the model functions**
+- [x] **Step 4: Write the model functions**
 
 Append to `backend/src/models/workspaces.js`:
 
@@ -1585,7 +1585,7 @@ export async function deleteWorkspaceData(sql, workspaceId) {
 }
 ```
 
-- [ ] **Step 5: Write the controller and the router**
+- [x] **Step 5: Write the controller and the router**
 
 Create `backend/src/controllers/admin.js`:
 
@@ -1651,7 +1651,7 @@ export function adminRouter(sql, config) {
 }
 ```
 
-- [ ] **Step 6: Mount it**
+- [x] **Step 6: Mount it**
 
 In `backend/src/app.js`, add the import:
 
@@ -1665,19 +1665,19 @@ and add the entry to the mount table, after `["/api/audit", auditRouter]`:
     ["/api/admin", adminRouter],
 ```
 
-- [ ] **Step 7: Run the test to verify it passes**
+- [x] **Step 7: Run the test to verify it passes**
 
 Run: `npm test -- tests/admin-reseed.test.js`
 Expected: PASS — all eight tests.
 
-- [ ] **Step 8: Run the whole suite**
+- [x] **Step 8: Run the whole suite**
 
 Run: `npm test`
 Expected: PASS. The stub-route inventory is unchanged: `/api/admin/reseed` is
 guarded by a token rather than by `requirePermission`, so the guard scan in
 `stub-routes.test.js` still sees exactly the permissions the table lists.
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add backend/src/middleware/admin-token.js backend/src/routes/admin.js backend/src/controllers/admin.js backend/src/models/workspaces.js backend/src/app.js backend/tests/helpers/app.js backend/tests/admin-reseed.test.js
@@ -1708,7 +1708,7 @@ request-time regardless.
 - Consumes: `POST /api/admin/reseed` from Task 4, over `API_BASE_URL`.
 - Produces: `GET /api/cron/reseed` on the Vercel deployment.
 
-- [ ] **Step 1: Write the handler**
+- [x] **Step 1: Write the handler**
 
 Create `src/app/api/cron/reseed/route.ts`:
 
@@ -1763,7 +1763,7 @@ export async function GET(request: Request) {
 }
 ```
 
-- [ ] **Step 2: Reduce `vercel.json`**
+- [x] **Step 2: Reduce `vercel.json`**
 
 Replace the whole file with:
 
@@ -1777,7 +1777,7 @@ The services block and both rewrites described a two-service Vercel
 deployment. The backend is a Render web service now, reached over
 `API_BASE_URL`; there is nothing left for Vercel to route.
 
-- [ ] **Step 3: Document the frontend variables**
+- [x] **Step 3: Document the frontend variables**
 
 Replace `.env.example` at the repository root with:
 
@@ -1799,13 +1799,13 @@ ADMIN_TOKEN=""
 CRON_SECRET=""
 ```
 
-- [ ] **Step 4: Verify the frontend still compiles**
+- [x] **Step 4: Verify the frontend still compiles**
 
 Run (from the repository root): `npx tsc --noEmit && npm run build`
 Expected: both exit 0, and the build output lists `/api/cron/reseed` as a
 route.
 
-- [ ] **Step 5: Verify the handler by hand**
+- [x] **Step 5: Verify the handler by hand**
 
 Run the backend (`npm start` in `backend/`, with `ADMIN_TOKEN`,
 `DEMO_WORKSPACE_ID` and a seeded database), then `npm run dev` at the root with
@@ -1819,7 +1819,7 @@ curl -i -H "Authorization: Bearer local-secret" http://127.0.0.1:3000/api/cron/r
 Expected: 401 for the first, and 200 with `{"workspace_id":…,"invoices":460,…}`
 for the second.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/app/api/cron/reseed/route.ts vercel.json .env.example
@@ -1838,19 +1838,19 @@ and the documents that describe a FastAPI service stop describing one.
 - Delete: `backend/app/`, `backend/migrations/`, `backend/scripts/`, every `backend/tests/*.py`, `backend/tests/__init__.py`, `backend/alembic.ini`, `backend/pytest.ini`, `backend/requirements.txt`
 - Modify: `backend/README.md`, `backend/.gitignore`, `src/lib/api/client.ts`, `src/lib/api/session.ts`, `src/proxy.ts`, `src/types/index.ts`
 
-- [ ] **Step 1: Delete every Python file**
+- [x] **Step 1: Delete every Python file**
 
 ```bash
 git rm -r backend/app backend/migrations backend/scripts
 git rm backend/tests/*.py backend/alembic.ini backend/pytest.ini backend/requirements.txt
 ```
 
-- [ ] **Step 2: Verify nothing Python is left**
+- [x] **Step 2: Verify nothing Python is left**
 
 Run: `git ls-files backend | grep -E '\.(py|ini|cfg)$|requirements'`
 Expected: no output.
 
-- [ ] **Step 3: Trim the backend `.gitignore`**
+- [x] **Step 3: Trim the backend `.gitignore`**
 
 Replace `backend/.gitignore` with:
 
@@ -1859,7 +1859,7 @@ node_modules/
 .env
 ```
 
-- [ ] **Step 4: Rewrite the backend README**
+- [x] **Step 4: Rewrite the backend README**
 
 Replace `backend/README.md` with:
 
@@ -1980,7 +1980,7 @@ with Zod at the boundary. JavaScript gives the backend no type contract to
 export, so that parse is what fails loudly when a field is renamed.
 ```
 
-- [ ] **Step 5: Fix the four comments that still say FastAPI**
+- [x] **Step 5: Fix the four comments that still say FastAPI**
 
 The service they name no longer exists. Comments only — no behaviour changes.
 
@@ -1989,7 +1989,7 @@ The service they name no longer exists. Comments only — no behaviour changes.
 - `src/proxy.ts:15` — "…never the authorisation — FastAPI verifies every request…" → "…never the authorisation — the API verifies every request…"
 - `src/types/index.ts:4` — "These mirror the FastAPI Pydantic schemas field-for-field…" → "These mirror the API's response shapes field-for-field…"
 
-- [ ] **Step 6: Verify both sides still pass**
+- [x] **Step 6: Verify both sides still pass**
 
 Run (from `backend/`): `npm test`
 Expected: PASS, every suite.
@@ -1997,7 +1997,7 @@ Expected: PASS, every suite.
 Run (from the repository root): `npx tsc --noEmit && npm run build`
 Expected: both exit 0.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add -A backend src/lib/api/client.ts src/lib/api/session.ts src/proxy.ts src/types/index.ts
@@ -2014,13 +2014,13 @@ here is automated, and each step names what to check before moving on.
 
 **Files:** none. This task changes no code.
 
-- [ ] **Step 1: Provision the database**
+- [x] **Step 1: Provision the database**
 
 Create a free Neon project. Copy two connection strings: the **pooled** one
 (used as `DATABASE_URL` everywhere) and the direct one (kept for manual psql).
 Expected: `psql "<pooled>" -c "select 1"` answers.
 
-- [ ] **Step 2: Create the Render web service**
+- [x] **Step 2: Create the Render web service**
 
 New → Web Service → connect this repository.
 
@@ -2041,7 +2041,7 @@ Expected: the deploy log shows `applied: 0000_schema.sql, 0001_derivation_views.
 then `listening on …`, and `curl https://<service>.onrender.com/health` answers
 `{"status":"ok","environment":"production"}`.
 
-- [ ] **Step 3: Seed the demo workspace**
+- [x] **Step 3: Seed the demo workspace**
 
 From a local checkout, with `DATABASE_URL` pointing at the same Neon database
 and `SECRET_KEY` set:
@@ -2054,7 +2054,7 @@ npm run seed -- --email demo@invoicepilot.app --password "<a real password>"
 Expected: `seeded <uuid>: {"customers":40,"invoices":460,…}` and the
 `set DEMO_WORKSPACE_ID=…` line. Keep the uuid and the password.
 
-- [ ] **Step 4: Finish the Render environment**
+- [x] **Step 4: Finish the Render environment**
 
 Add `DEMO_WORKSPACE_ID=<the uuid from step 3>` and redeploy.
 
@@ -2068,7 +2068,7 @@ curl -i -X POST -H "X-Admin-Token: <ADMIN_TOKEN>" \
 answers 200 with `"invoices":460`, and the same call with a wrong token answers
 401.
 
-- [ ] **Step 5: Configure Vercel**
+- [x] **Step 5: Configure Vercel**
 
 On the existing project, set: `API_BASE_URL=https://<service>.onrender.com`,
 `DEMO_WORKSPACE_ID=<the uuid>`, `ADMIN_TOKEN=<the same token>`. Generate
@@ -2076,7 +2076,7 @@ On the existing project, set: `API_BASE_URL=https://<service>.onrender.com`,
 
 Expected: the deployment's Cron Jobs tab lists `/api/cron/reseed` at `0 4 * * *`.
 
-- [ ] **Step 6: Verify the cron path end to end**
+- [x] **Step 6: Verify the cron path end to end**
 
 Trigger the cron from the Vercel dashboard (Cron Jobs → Run).
 
@@ -2098,7 +2098,7 @@ regardless, so the first query after a quiet period pays that wake-up.
 Expected: the monitor reports the service up, and a cold `curl` of `/health`
 answers in well under a second.
 
-- [ ] **Step 8: The acceptance check spec §13 asks for**
+- [x] **Step 8: The acceptance check spec §13 asks for**
 
 Open the Vercel URL, sign in with the demo credentials from step 3, and land on
 the dashboard.
@@ -2109,7 +2109,7 @@ application shell — the banner only renders when the session's workspace id
 equals `DEMO_WORKSPACE_ID`, so seeing it proves the token, the seeded workspace
 and both environments agree.
 
-- [ ] **Step 9: Record the result**
+- [x] **Step 9: Record the result**
 
 Append a `## Status` section to this plan naming what was verified, what was
 not, and any deviation. Commit:
@@ -2157,3 +2157,117 @@ git commit -m "docs: record the P3 deployment result"
 Not in this plan and not in this phase: the thirteen stub domains, the shared
 scoping helper (P2 deferred it to the first models that need it — none of them
 land here), the demo login button, and any frontend data wiring.
+
+## Status: done (2026-09-16)
+
+Tasks 1–6 (generator, writer + invariants, seed CLI, reseed endpoint, cron
+route, Python deletion) built and verified locally: backend `npm test`
+green throughout, ending at **385/385** (`node:test`, 62 suites) against a
+local Postgres whose database name contains `test`. Frontend `npx tsc
+--noEmit` and `npm run build` clean after every task that touched a
+frontend file. All 6 commits pushed to `origin/main`.
+
+Task 7 deployed live:
+
+- **Neon.** Project `invoicepilot` (`withered-breeze-60253768`), database
+  `neondb`, region `ap-southeast-1`, pooled endpoint. Deliberately not
+  `invoicepilot_test` (see deviation below).
+- **Render.** Web service `InvoicePilot`, root `backend`, build `npm ci`,
+  start `node src/server.js`, health check `/health`, free plan. Live at
+  `https://invoicepilot-0sc2.onrender.com`. Confirmed by hand:
+  `GET /health` → `{"status":"ok","environment":"production"}`.
+- **Seeded.** `npm run seed` against the Neon `neondb` database via the
+  Neon MCP-supplied connection string: workspace
+  `90e401c5-5920-49ec-8397-6de10cf24699`, 40 customers, 460 invoices, 398
+  payments, 1325 events. Demo login `demo@invoicepilot.app` /
+  `Meridian-Demo-2026-x7q`.
+- **Reseed confirmed.** `POST /api/admin/reseed` against the live Render
+  URL with `X-Admin-Token` → 200, full counts, ledger unchanged in shape.
+- **Vercel.** `API_BASE_URL`, `DEMO_WORKSPACE_ID`, `ADMIN_TOKEN`,
+  `CRON_SECRET` set as Production env vars. Live at
+  `https://invoicepilot-three.vercel.app`.
+- **Cron path confirmed end to end.** `GET /api/cron/reseed` with
+  `Authorization: Bearer <CRON_SECRET>` against the live Vercel URL → 200,
+  forwarded through to Render through to Neon, full reseed response
+  returned.
+- **Acceptance check (spec §13) passed.** Signed in at
+  `https://invoicepilot-three.vercel.app/login` with the demo credentials;
+  landed on the dashboard.
+
+### Deviations from the plan as written
+
+- **The Neon database is `neondb`, not a database named after the
+  project.** The user's first Neon project used the default database name
+  `invoicepilot_test` — a name that contains `test`, which is exactly what
+  `backend/tests/helpers/database.js`'s `assertTestDatabase` treats as safe
+  to drop and recreate. Wiring that same string into Render as
+  `DATABASE_URL` would have meant a routine local `npm test` run could
+  destroy the live demo data, since the only safety check the harness makes
+  is "does the name contain `test`". Caught before it was wired in; a
+  second Neon project (`invoicepilot`) was created instead, using its
+  default `neondb` database, and the `invoicepilot_test` project was never
+  used for anything but local testing. Not a plan defect — the plan's own
+  Global Constraints section states the safety rule the first database name
+  would have defeated; this is the rule doing its job.
+- **Render's Root Directory, Build Command and Start Command needed manual
+  correction.** Render's "New Web Service" auto-detected Next.js from the
+  repository root and pre-filled `npm install; npm run build` /
+  `npm run start` with no Root Directory set — it would have deployed the
+  frontend, not `backend/`. Fixed by hand: Root Directory `backend`, Build
+  Command `npm ci`, Start Command `node src/server.js`, Health Check Path
+  `/health`. Not something the plan could have prevented — it is a Render
+  dashboard default, not a repository setting.
+- **Seven commits were built locally but not pushed before the first
+  Render deploy.** `git push` was never in Tasks 1–6 as a step — commits
+  landed on local `main` only. The first Render deploy (triggered from the
+  dashboard, not by a push) built the last **pushed** commit, `b7a65a8`
+  (P2's final commit), not the P3 work. Symptom: `/health` answered fine
+  (P2 already had that route) but `POST /api/admin/reseed` answered
+  Express's default 404 (`Cannot POST /api/admin/reseed`) — the route
+  genuinely did not exist in what was deployed. Diagnosed by comparing
+  `git log --oneline` against `git log origin/main`, which showed local
+  7 commits ahead. Fixed with `git push origin main`; Render's auto-deploy
+  picked up the push and rebuilt correctly, confirmed by the same curl
+  going from 404 to 200. No application code was at fault.
+- **Vercel's Framework Preset was stuck on `services`.** A project-level
+  setting left over from the topology the superseded
+  `2026-09-15-node-backend-port-design.md` spec used, predating this
+  Express port. The reduced `vercel.json` (just the cron entry, per Task 5)
+  declares no `services` block, so the build failed with "Project framework
+  is set to 'services', but no services are declared." Fixed in the Vercel
+  dashboard (Settings → Build and Deployment → Framework Preset → Next.js),
+  not in the repository — nothing in this port's file changes could have
+  set or cleared that project setting, since `vercel.json`'s `services` key
+  and the dashboard's Framework Preset are independent.
+- **`CRON_SECRET` was generated by hand, not by Vercel.** The plan's Task 5
+  step 5 says Vercel "offers to" generate one once a cron exists; the
+  dashboard flow encountered did not offer this, so one was generated the
+  same way `SECRET_KEY` and `ADMIN_TOKEN` were (`crypto.randomBytes(32)
+  .toString('base64url')`) and set by hand.
+- **The Neon connection string was fetched via Neon's MCP server, not
+  copied from the console by hand.** The plan's Task 7 step 1 assumed a
+  person copying it from `console.neon.tech`. Partway through this
+  session the user connected `mcp.neon.tech`, so
+  `mcp__neon__get_connection_string` was used instead once available —
+  same string, same pooled endpoint, no functional difference from what
+  the plan specifies.
+
+No other deviations: file structure, task order, and every test count
+matched what the plan predicted.
+
+### Not verified in-session
+
+**Task 7 step 7 (keep-awake monitor) was not set up.** No external uptime
+monitor is pinging `/health`. Without it, the Vercel cron's 04:00 UTC call
+may hit a suspended Render instance and pay the ~50-second cold-start cost
+against the cron function's 60-second ceiling — it will very likely still
+succeed today (the ledger seed itself completes well under that), but this
+is the one budget risk the plan flagged in Express spec §12 that stays
+open. Setting up UptimeRobot (or similar) against
+`https://invoicepilot-0sc2.onrender.com/health` on a 5-minute interval is
+the remaining action, and is a dashboard step outside this repository.
+
+CI (`.github/workflows/ci.yml`) was not watched running on GitHub for
+these commits specifically — the backend suite ran locally against the
+same `postgres:16`-shaped local database P1 and P2 used, not by observing
+Actions execute the container.
