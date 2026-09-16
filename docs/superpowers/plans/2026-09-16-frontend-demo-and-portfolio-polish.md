@@ -40,7 +40,7 @@
 - Consumes: `apiFetch` and `ApiError` from `src/lib/api/client.ts`; `setSessionCookies` from `src/lib/auth/cookies.ts`; `ActionResult` from `src/lib/actions/auth.ts`.
 - Produces: `enterDemo(): Promise<ActionResult>` from `src/lib/actions/demo.ts`; `authResponseSchema` exported from `src/lib/api/session.ts`; the route `/demo`.
 
-- [ ] **Step 1: Move the auth response schema somewhere both actions can import it**
+- [x] **Step 1: Move the auth response schema somewhere both actions can import it**
 
 A `"use server"` module may only export async functions, so `demo.ts` cannot import the schema from `auth.ts`. Move it to the plain module that already owns `sessionUserSchema`.
 
@@ -59,7 +59,7 @@ export const authResponseSchema = z.object({
 });
 ```
 
-- [ ] **Step 2: Point `auth.ts` at the moved schema**
+- [x] **Step 2: Point `auth.ts` at the moved schema**
 
 In `src/lib/actions/auth.ts`, delete the local `const authResponseSchema = z.object({...})` block (lines 26-32) and change the session import to:
 
@@ -69,12 +69,12 @@ import { authResponseSchema } from "@/lib/api/session";
 
 `sessionUserSchema` was imported only to build that block, so it leaves the import list with it.
 
-- [ ] **Step 3: Verify nothing broke**
+- [x] **Step 3: Verify nothing broke**
 
 Run: `npx tsc --noEmit`
 Expected: no errors.
 
-- [ ] **Step 4: Write the demo entry action**
+- [x] **Step 4: Write the demo entry action**
 
 Create `src/lib/actions/demo.ts`:
 
@@ -139,7 +139,7 @@ export async function enterDemo(): Promise<ActionResult> {
 }
 ```
 
-- [ ] **Step 5: Write the client entry screen**
+- [x] **Step 5: Write the client entry screen**
 
 Create `src/components/demo/demo-entry.tsx`:
 
@@ -247,7 +247,7 @@ export function DemoEntry() {
 }
 ```
 
-- [ ] **Step 6: Write the route that carries the function timeout**
+- [x] **Step 6: Write the route that carries the function timeout**
 
 `maxDuration` cannot be exported from a `"use client"` module, and the default function timeout on Vercel Hobby is shorter than the measured 21.8-second cold start. The route is a Server Component that sets the ceiling and renders the client screen.
 
@@ -274,7 +274,7 @@ export default function DemoPage() {
 }
 ```
 
-- [ ] **Step 7: Let a signed-in visitor skip the door**
+- [x] **Step 7: Let a signed-in visitor skip the door**
 
 In `src/proxy.ts`, add `/demo` to `SIGNED_OUT_ONLY` (line 36):
 
@@ -284,7 +284,7 @@ const SIGNED_OUT_ONLY = ["/login", "/signup", "/forgot-password", "/demo"];
 
 Someone who already has a session is redirected to `/dashboard` instead of logging in a second time.
 
-- [ ] **Step 8: Document the new environment variables**
+- [x] **Step 8: Document the new environment variables**
 
 Append to `.env.example`:
 
@@ -306,12 +306,12 @@ Expected: the waking screen appears, then the dashboard loads with the demo bann
 Then unset `DEMO_EMAIL`, restart, and visit `/demo` again.
 Expected: "The demo is unavailable right now", a working "Create a workspace" button, and no error boundary.
 
-- [ ] **Step 10: Verify the build**
+- [x] **Step 10: Verify the build**
 
 Run: `npx tsc --noEmit && npm run build`
 Expected: both succeed; `/demo` appears in the route list.
 
-- [ ] **Step 11: Commit**
+- [x] **Step 11: Commit**
 
 ```bash
 git add src/lib/actions/demo.ts src/app/demo src/components/demo src/lib/api/session.ts src/lib/actions/auth.ts src/proxy.ts .env.example
@@ -334,7 +334,7 @@ git commit -m "feat: open the demo workspace in one click"
 - Consumes: the `/demo` route from Task 1.
 - Produces: `GET /api/warm` returning 204; `<WarmDemo />` from `src/components/marketing/warm-demo.tsx`.
 
-- [ ] **Step 1: Write the warm-up route**
+- [x] **Step 1: Write the warm-up route**
 
 Create `src/app/api/warm/route.ts`:
 
@@ -366,7 +366,7 @@ export async function GET() {
 }
 ```
 
-- [ ] **Step 2: Write the trigger**
+- [x] **Step 2: Write the trigger**
 
 Create `src/components/marketing/warm-demo.tsx`:
 
@@ -386,11 +386,11 @@ export function WarmDemo() {
 }
 ```
 
-- [ ] **Step 3: Mount it on every marketing page**
+- [x] **Step 3: Mount it on every marketing page**
 
 In `src/app/(marketing)/layout.tsx`, import `WarmDemo` and render `<WarmDemo />` as the first child of the layout's returned fragment. Mounting it in the layout rather than the hero covers the visitor who lands on `/pricing` or `/faq` first.
 
-- [ ] **Step 4: Make the demo the hero's primary action**
+- [x] **Step 4: Make the demo the hero's primary action**
 
 In `src/components/marketing/sections.tsx`, replace the two `LinkButton`s in `Hero` (lines 50-58) with:
 
@@ -408,7 +408,7 @@ In `src/components/marketing/sections.tsx`, replace the two `LinkButton`s in `He
 
 Then change the trust line below it so it describes the demo rather than the trial: replace the three items with `No signup` / `Live data` / `Resets daily`, keeping the existing `CheckCircle2` markup for each.
 
-- [ ] **Step 5: Make the header CTA the demo**
+- [x] **Step 5: Make the header CTA the demo**
 
 In `src/components/marketing/site-chrome.tsx`, replace the `Start free` `LinkButton` (lines 57-60) with:
 
@@ -422,11 +422,11 @@ In `src/components/marketing/site-chrome.tsx`, replace the `Start free` `LinkBut
           </LinkButton>
 ```
 
-- [ ] **Step 6: Fix the footer link that redirects to login**
+- [x] **Step 6: Fix the footer link that redirects to login**
 
 In the same file, line 120, change `{ href: "/dashboard", label: "Live demo" }` to `{ href: "/demo", label: "Live demo" }`.
 
-- [ ] **Step 7: Give the login page a way in**
+- [x] **Step 7: Give the login page a way in**
 
 In `src/app/(auth)/login/page.tsx`, add a third paragraph inside the existing `text-caption` block, after the "New here?" paragraph:
 
@@ -446,7 +446,7 @@ Run `npm run dev`, load `/`, and confirm in the browser network panel that `/api
 Run: `npx tsc --noEmit && npm run build`
 Expected: both succeed.
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add src/app/api/warm src/components/marketing "src/app/(marketing)/layout.tsx" "src/app/(auth)/login/page.tsx"
@@ -467,7 +467,7 @@ git commit -m "feat: lead with the demo and wake the API before the click"
 - Consumes: the `Invoice` and `ISODate` types from `src/types/index.ts`.
 - Produces: `applyPayment(invoice: Invoice, amountCents: number, receivedOn: ISODate): Invoice`, `markPaid(invoice: Invoice, on: ISODate): Invoice`, and `markReminded(invoice: Invoice, on: ISODate): Invoice`, all exported from `src/lib/data/mutate.ts`. Tasks 4 and 5 both import them.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `src/lib/data/mutate.test.ts`:
 
@@ -564,7 +564,7 @@ test("a reminder stamps the contact date and nothing else", () => {
 });
 ```
 
-- [ ] **Step 2: Add the test script**
+- [x] **Step 2: Add the test script**
 
 In `package.json`, add to `scripts`:
 
@@ -572,12 +572,12 @@ In `package.json`, add to `scripts`:
     "test": "node --test \"src/lib/data/**/*.test.ts\""
 ```
 
-- [ ] **Step 3: Run the test to verify it fails**
+- [x] **Step 3: Run the test to verify it fails**
 
 Run: `npm test`
 Expected: FAIL — `Cannot find module './mutate.ts'`.
 
-- [ ] **Step 4: Write the mutation**
+- [x] **Step 4: Write the mutation**
 
 Create `src/lib/data/mutate.ts`:
 
@@ -625,14 +625,14 @@ export function markReminded(invoice: Invoice, on: ISODate): Invoice {
 }
 ```
 
-- [ ] **Step 5: Run the test to verify it passes**
+- [x] **Step 5: Run the test to verify it passes**
 
 Run: `npm test`
 Expected: PASS — 7 tests.
 
 If Node reports `Cannot find package '@/types'`, the type import lost its `import type` prefix. Type-only imports are erased before execution; value imports are not, and Node does not resolve the `@/*` alias.
 
-- [ ] **Step 6: Run the tests in CI**
+- [x] **Step 6: Run the tests in CI**
 
 In `.github/workflows/ci.yml`, in the `frontend` job only, change `node-version: 22` to `node-version: 24` and add a step after `npm run build`:
 
@@ -642,12 +642,12 @@ In `.github/workflows/ci.yml`, in the `frontend` job only, change `node-version:
 
 Node 24 is pinned because running a TypeScript file under `node --test` needs unflagged type stripping (Node 22.18+). The `backend` job keeps its own Node 22 pin; the two jobs are independent.
 
-- [ ] **Step 7: Verify the whole suite**
+- [x] **Step 7: Verify the whole suite**
 
 Run: `npx tsc --noEmit && npm test && npm run build`
 Expected: all three succeed.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add src/lib/data/mutate.ts src/lib/data/mutate.test.ts package.json .github/workflows/ci.yml
@@ -665,7 +665,7 @@ git commit -m "feat: derive an invoice's new state from a payment"
 - Consumes: `applyPayment`, `markPaid`, `markReminded` from `src/lib/data/mutate.ts` (Task 3).
 - Produces: nothing other tasks depend on.
 
-- [ ] **Step 1: Hold the rows in state**
+- [x] **Step 1: Hold the rows in state**
 
 In `src/components/invoices/invoices-table.tsx`, add the import:
 
@@ -688,11 +688,11 @@ Then, immediately after the `const [age, setAge] = useState<AgeFilter>("open");`
     );
 ```
 
-- [ ] **Step 2: Derive from the local copy**
+- [x] **Step 2: Derive from the local copy**
 
 In the `data` `useMemo` immediately below, replace all four references to `invoices` with `rows`, and change the dependency array from `[invoices, age]` to `[rows, age]`.
 
-- [ ] **Step 3: Add "Mark as paid" to the row menu**
+- [x] **Step 3: Add "Mark as paid" to the row menu**
 
 In the row `DropdownMenuContent`, insert a new item directly above the existing "Send reminder" item:
 
@@ -712,7 +712,7 @@ In the row `DropdownMenuContent`, insert a new item directly above the existing 
 
 `Check` and `money` are already imported in this file.
 
-- [ ] **Step 4: Make the row-level reminder stamp the row**
+- [x] **Step 4: Make the row-level reminder stamp the row**
 
 Replace the `onClick` on the existing "Send reminder" item with:
 
@@ -725,7 +725,7 @@ Replace the `onClick` on the existing "Send reminder" item with:
                   }}
 ```
 
-- [ ] **Step 5: Make the bulk actions move every selected row**
+- [x] **Step 5: Make the bulk actions move every selected row**
 
 In the `BulkBar`, replace the two `onClick` handlers with:
 
@@ -769,12 +769,12 @@ Run `npm run dev` and open `/invoices` (via `/demo` if you are signed out).
 
 Expected, with the age filter on "open": marking a row paid removes it from the list and the header count drops by one. Switching the filter to "all" shows it with a paid badge, a zero balance and no risk badge. Selecting three rows and using the bulk "Mark paid" does the same three times and clears the selection.
 
-- [ ] **Step 7: Verify the build**
+- [x] **Step 7: Verify the build**
 
 Run: `npx tsc --noEmit && npm run build`
 Expected: both succeed.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add src/components/invoices/invoices-table.tsx
@@ -796,7 +796,7 @@ git commit -m "feat: settle and chase invoices from the table itself"
 - Consumes: `applyPayment`, `markReminded` from `src/lib/data/mutate.ts`; the `Invoice` and `CollectionEvent` types.
 - Produces: `InvoiceLiveProvider`, `useInvoiceLive`, `InvoiceLiveFigure`, `InvoiceLiveStatus` and `InvoiceLiveTimeline` from `src/components/invoices/invoice-live.tsx`. `RecordPaymentDialog` gains `onRecorded?: (amountCents: number, receivedOn: string) => void`; `SendReminderDialog` gains `onSent?: () => void`; `InvoiceActions` gains `onRecorded` and `onSent` and passes them through.
 
-- [ ] **Step 1: Give the dialogs a way to report what happened**
+- [x] **Step 1: Give the dialogs a way to report what happened**
 
 In `src/components/invoicepilot/record-payment-dialog.tsx`, add `onRecorded` to the props:
 
@@ -818,11 +818,11 @@ and call it inside `onSubmit`, directly after `form.reset()`:
     onRecorded?.(cents, values.received_on);
 ```
 
-- [ ] **Step 2: Do the same for the reminder dialog**
+- [x] **Step 2: Do the same for the reminder dialog**
 
 In `src/components/invoicepilot/send-reminder-dialog.tsx`, add `onSent?: () => void` to the props and call `onSent?.();` immediately before the existing `toast.success("Reminder sent", …)`.
 
-- [ ] **Step 3: Pass both through the action row**
+- [x] **Step 3: Pass both through the action row**
 
 In `src/components/invoices/invoice-actions.tsx`, add `onRecorded` and `onSent` to the props with the same types, then forward them:
 
@@ -836,12 +836,12 @@ In `src/components/invoices/invoice-actions.tsx`, add `onRecorded` and `onSent` 
           <RecordPaymentDialog invoice={invoice} today={today} onRecorded={onRecorded} />
 ```
 
-- [ ] **Step 4: Verify nothing broke**
+- [x] **Step 4: Verify nothing broke**
 
 Run: `npx tsc --noEmit`
 Expected: no errors. Existing call sites pass neither prop and keep their current behaviour.
 
-- [ ] **Step 5: Write the live island**
+- [x] **Step 5: Write the live island**
 
 The detail page shows the same invoice in three places — the header figure, the status badge and the activity timeline — and they sit in different cards. One provider owns the state; three small consumers read it. The page stays a Server Component and passes the server-rendered invoice in as the initial value.
 
@@ -997,7 +997,7 @@ export function InvoiceLiveTimeline({ emptyLabel }: { emptyLabel?: string }) {
 
 `InvoiceStatusBadge` takes `status: InvoiceStatus` (`src/components/invoicepilot/status-badge.tsx:90-96`), which is what `InvoiceLiveStatus` passes.
 
-- [ ] **Step 6: Wire the detail page to the island**
+- [x] **Step 6: Wire the detail page to the island**
 
 In `src/app/(app)/invoices/[id]/page.tsx`:
 
@@ -1016,12 +1016,12 @@ Run `npm run dev`, open any overdue invoice from `/invoices`.
 
 Expected: recording a full payment closes the dialog, the headline figure drops to the amount with "paid in full" beneath it, the status badge turns to paid, the action row collapses to the settled set, and a "Payment of … recorded" entry appears at the top of the activity timeline. Sending a reminder adds a reminder entry. A partial payment leaves the invoice open with the balance reduced.
 
-- [ ] **Step 8: Verify the build**
+- [x] **Step 8: Verify the build**
 
 Run: `npx tsc --noEmit && npm test && npm run build`
 Expected: all three succeed.
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add src/components/invoices/invoice-live.tsx "src/app/(app)/invoices/[id]/page.tsx" src/components/invoicepilot/record-payment-dialog.tsx src/components/invoicepilot/send-reminder-dialog.tsx src/components/invoices/invoice-actions.tsx
@@ -1038,7 +1038,7 @@ git commit -m "feat: move the figures on an invoice when you act on it"
 
 **Interfaces:** none.
 
-- [ ] **Step 1: Correct the banner**
+- [x] **Step 1: Correct the banner**
 
 The banner currently claims "Everything you change here is real until then", which is false while the screens read fixtures. Replace the `<p>` in `src/components/invoicepilot/demo-banner.tsx` with:
 
@@ -1050,7 +1050,7 @@ The banner currently claims "Everything you change here is real until then", whi
       </p>
 ```
 
-- [ ] **Step 2: Record the known ceiling on invoice creation**
+- [x] **Step 2: Record the known ceiling on invoice creation**
 
 In `src/components/invoices/new-invoice-form.tsx`, add above the `toast.success("Invoice created", …)` call inside `onSubmit`:
 
@@ -1060,12 +1060,12 @@ In `src/components/invoices/new-invoice-form.tsx`, add above the `toast.success(
     // backend write path, not by a client-side store built to be deleted.
 ```
 
-- [ ] **Step 3: Verify**
+- [x] **Step 3: Verify**
 
 Run: `npx tsc --noEmit && npm run build`
 Expected: both succeed.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/components/invoicepilot/demo-banner.tsx src/components/invoices/new-invoice-form.tsx
@@ -1085,7 +1085,7 @@ git commit -m "docs: state plainly which parts of the demo are real"
 **Interfaces:**
 - Produces: `SITE.url` resolved from the environment; `metadataBase` on the root metadata. Task 8's OG image relies on `metadataBase` to resolve.
 
-- [ ] **Step 1: Resolve the site URL from the environment**
+- [x] **Step 1: Resolve the site URL from the environment**
 
 In `src/lib/marketing.ts`, replace the hardcoded `url: "https://invoicepilot.com"` with a resolved constant declared above `SITE`:
 
@@ -1112,7 +1112,7 @@ export const SITE = {
 } as const;
 ```
 
-- [ ] **Step 2: Give metadata an absolute base**
+- [x] **Step 2: Give metadata an absolute base**
 
 In `src/app/layout.tsx`, import `SITE` from `@/lib/marketing` and add `metadataBase` as the first key of the exported `metadata` object:
 
@@ -1122,7 +1122,7 @@ export const metadata: Metadata = {
   title: {
 ```
 
-- [ ] **Step 3: Move robots out of `public/`**
+- [x] **Step 3: Move robots out of `public/`**
 
 `public/robots.txt` hardcodes the sitemap at a domain that is not this deployment. Delete it and create `src/app/robots.ts`, carrying over the rules the static file declared:
 
@@ -1173,7 +1173,7 @@ and `/api/` on the wildcard group. Nothing else changes.
 Run: `npm run build && npm run dev`, then load `http://localhost:3000/robots.txt` and `http://localhost:3000/sitemap.xml`.
 Expected: robots lists the sitemap at `http://localhost:3000/sitemap.xml`, and every sitemap URL uses the same origin. No occurrence of `invoicepilot.com` in either.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/lib/marketing.ts src/app/layout.tsx src/app/robots.ts public/robots.txt
@@ -1192,7 +1192,7 @@ git commit -m "fix: point canonicals and the sitemap at this deployment"
 - Consumes: `SITE` from `src/lib/marketing.ts` and `metadataBase` from Task 7.
 - Produces: `/opengraph-image` at 1200×630, referenced automatically by Next in `og:image`.
 
-- [ ] **Step 1: Draw the card**
+- [x] **Step 1: Draw the card**
 
 `ImageResponse` ships with Next — no dependency is added. It supports a subset of CSS: flexbox only, no CSS variables, no Tailwind classes. The design-system colours are therefore written as literal values **in this file only**; every other file keeps using tokens.
 
@@ -1296,7 +1296,7 @@ export default function OpengraphImage() {
 
 The card uses `ImageResponse`'s default font rather than fetching and embedding Geist. Loading a font file into the renderer is real complexity for an image most people see at thumbnail size.
 
-- [ ] **Step 2: Declare the Twitter card type**
+- [x] **Step 2: Declare the Twitter card type**
 
 In `src/app/layout.tsx`, add to the `metadata` object after `description`:
 
@@ -1313,12 +1313,12 @@ Expected: a 1200×630 PNG with the product name, the tagline and three KPI tiles
 
 Then view the page source of `/` and confirm an `og:image` meta tag resolves to an absolute URL.
 
-- [ ] **Step 4: Verify the build**
+- [x] **Step 4: Verify the build**
 
 Run: `npx tsc --noEmit && npm run build`
 Expected: both succeed.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/app/opengraph-image.tsx src/app/layout.tsx
@@ -1337,12 +1337,12 @@ git commit -m "feat: render a social card that shows the product"
 
 **Interfaces:** none.
 
-- [ ] **Step 1: Confirm nothing references the files you are about to delete**
+- [x] **Step 1: Confirm nothing references the files you are about to delete**
 
 Run: `grep -rn "next.svg\|vercel.svg\|window.svg\|file.svg\|globe.svg" src public README.md`
 Expected: no matches outside `public/` itself. If a match appears, fix that reference first.
 
-- [ ] **Step 2: Write the app icon**
+- [x] **Step 2: Write the app icon**
 
 `src/app/favicon.ico` is still create-next-app's. Replace it with an SVG icon drawn from the same mark as `src/components/invoicepilot/logo.tsx`, with the token classes resolved to literal colours (a favicon has no stylesheet):
 
@@ -1357,7 +1357,7 @@ Create `src/app/icon.svg`:
 </svg>
 ```
 
-- [ ] **Step 3: Write the touch icon**
+- [x] **Step 3: Write the touch icon**
 
 iOS ignores SVG icons, so the home-screen icon is rendered rather than shipped
 as a binary — same `ImageResponse` already used for the social card, no image
@@ -1395,7 +1395,7 @@ export default function AppleIcon() {
 }
 ```
 
-- [ ] **Step 4: Delete the leftovers**
+- [x] **Step 4: Delete the leftovers**
 
 ```bash
 git rm src/app/favicon.ico public/next.svg public/vercel.svg public/window.svg public/file.svg public/globe.svg
@@ -1406,7 +1406,7 @@ git rm src/app/favicon.ico public/next.svg public/vercel.svg public/window.svg p
 Run: `npm run build && npm run dev`, then hard-reload `http://localhost:3000` and check the browser tab. Also open `http://localhost:3000/apple-icon`.
 Expected: the InvoicePilot mark in the tab, not the Next.js logo; a 180×180 PNG at `/apple-icon`. `/next.svg` now 404s, and no page is broken by it.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/app/icon.svg src/app/apple-icon.tsx
@@ -1423,7 +1423,7 @@ git commit -m "feat: ship our own icons and drop the starter assets"
 
 **Interfaces:** none.
 
-- [ ] **Step 1: Gather the facts the README states**
+- [x] **Step 1: Gather the facts the README states**
 
 Before writing, confirm each of these from the repository rather than from memory:
 
@@ -1433,7 +1433,7 @@ Before writing, confirm each of these from the repository rather than from memor
 - What CI runs: `.github/workflows/ci.yml`
 - The cold-start figure: 21.8 seconds, measured 2026-09-16 against `/health`
 
-- [ ] **Step 2: Write the README**
+- [x] **Step 2: Write the README**
 
 Replace `README.md` entirely. Structure, in order:
 
@@ -1452,7 +1452,7 @@ Write it as prose for a reader who has never seen the project, not as notes to y
 
 Read the rendered README on GitHub after pushing, or in a Markdown preview. Every link resolves, every command is copy-pasteable, and the screenshots render.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add README.md docs/screenshots
@@ -1548,3 +1548,14 @@ These are not code and cannot be done from the repository:
 - **The invoice detail island is a small context provider with three consumers**, not one wrapper component. The spec requires the figure, the badge and the timeline to respond, and those sit in three different cards on the page.
 - **The dialog callbacks are `onRecorded(amountCents, receivedOn)` and `onSent()`**, rather than the spec's single `onDone(result)`. The two dialogs report different things, and a shared name carrying a union type would be decoded at every call site for no gain.
 - **The touch icon is rendered by `ImageResponse` (`apple-icon.tsx`)** rather than committed as `apple-icon.png`. Same output, no binary in the repository and no image tooling in the loop.
+
+## Execution log (inline agent run, 2026-09-16)
+
+- **Task 1, Step 9 (verify locally) skipped.** No backend instance or `DEMO_EMAIL`/`DEMO_PASSWORD` available in this execution environment. `tsc --noEmit` and `npm run build` (Step 10) both passed and `/demo` appears in the route list; manual browser verification is left for the author.
+- **Task 2, Step 8's browser click-through (network panel, hero/header/footer CTAs) skipped** for the same reason — no dev server session here. `tsc --noEmit` and `npm run build` both passed.
+- **Task 4: the new local-copy state is named `invoiceRows`/`setInvoiceRows`, not `rows`/`setRows` as the plan's snippet shows.** The render code a few dozen lines below already declares `const rows = table.getRowModel().rows;` — the plan's name collides with it (`TS2451: Cannot redeclare block-scoped variable 'rows'`). Renaming the new state was the smaller diff. Step 6 (hand-verify in a running browser) skipped — no dev server session here; `tsc --noEmit` and `npm run build` both passed.
+- **Task 5, Step 7 (hand-verify in a running browser) skipped**, same reason. `tsc --noEmit`, `npm test` and `npm run build` all passed.
+- **Task 7, Step 4 (loading `/robots.txt` and `/sitemap.xml` in a browser) skipped**, same reason. `npm run build` confirms `/robots.txt` in the route list and no occurrence of `invoicepilot.com` remains in the source.
+- **Task 8, Step 3 (opening `/opengraph-image` in a browser, viewing page source for `og:image`) skipped**, same reason. `npm run build` confirms `/opengraph-image` in the route list; `tsc --noEmit` passed.
+- **Task 9, Step 5 (hard-reloading the browser tab, opening `/apple-icon`) skipped**, same reason. `npm run build` confirms `/apple-icon` and `/icon.svg` in the route list.
+- **Task 10, Step 3 (reading the rendered README on GitHub with screenshots in place) not done — cannot be, yet.** Nothing is pushed and `docs/screenshots/*.png` do not exist; capturing them needs a running browser against the live `/demo`, which is the author's manual step (see below). Every link and file path the README cites was checked against the repository directly instead: `design-system/invoicepilot/MASTER.md`, `src/lib/api/client.ts`, `src/proxy.ts`, `src/lib/data/verify.ts` all exist; the route count (42), frontend test count (7) and CI job contents were read from this session's own `npm run build` / `npm test` / `.github/workflows/ci.yml`. The backend test count (385 tests, 62 suites) could not be re-run — no local Postgres in this environment (`node --test` fails fast on `DATABASE_URL is not set`) — so it is carried over from `docs/superpowers/plans/2026-09-16-express-backend-port-p3-seeder-and-deployment.md`'s "Status: done" section, the last verified run, with no `backend/` commits since.
