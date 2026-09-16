@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { ChevronsUpDown, LogOut, UserRound } from "lucide-react";
 
+import { logout } from "@/lib/actions/auth";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -44,6 +45,7 @@ export function AppSidebar({
   overdueCount: number;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
 
   const isActive = (href: string) =>
     pathname === href || pathname.startsWith(`${href}/`);
@@ -131,7 +133,14 @@ export function AppSidebar({
                   Account settings
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem render={<Link href="/login" />}>
+                <DropdownMenuItem
+                  onClick={() => {
+                    void logout().then(() => {
+                      router.push("/login");
+                      router.refresh();
+                    });
+                  }}
+                >
                   <LogOut className="size-4" />
                   Sign out
                 </DropdownMenuItem>
