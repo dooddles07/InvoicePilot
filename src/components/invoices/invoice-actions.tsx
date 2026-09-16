@@ -23,10 +23,14 @@ export function InvoiceActions({
   invoice,
   contactName,
   today,
+  onRecorded,
+  onSent,
 }: {
   invoice: Invoice;
   contactName: string;
   today: string;
+  onRecorded?: (amountCents: number, receivedOn: string) => void;
+  onSent?: () => void;
 }) {
   const settled = invoice.status === "paid";
   const tone =
@@ -40,8 +44,9 @@ export function InvoiceActions({
             invoice={invoice}
             contactName={contactName}
             recommendedTone={tone}
+            onSent={onSent}
           />
-          <RecordPaymentDialog invoice={invoice} today={today} />
+          <RecordPaymentDialog invoice={invoice} today={today} onRecorded={onRecorded} />
         </>
       ) : null}
 

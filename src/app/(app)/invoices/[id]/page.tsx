@@ -3,11 +3,14 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Building2, Mail, Phone, Sparkles } from "lucide-react";
 
-import { InvoiceActions } from "@/components/invoices/invoice-actions";
 import {
-  InvoiceStatusBadge,
-  RiskBadge,
-} from "@/components/invoicepilot/status-badge";
+  InvoiceLiveActions,
+  InvoiceLiveFigure,
+  InvoiceLiveProvider,
+  InvoiceLiveStatus,
+  InvoiceLiveTimeline,
+} from "@/components/invoices/invoice-live";
+import { RiskBadge } from "@/components/invoicepilot/status-badge";
 import { Timeline } from "@/components/invoicepilot/timeline";
 import { Reveal } from "@/components/motion/reveal";
 import { Separator } from "@/components/ui/separator";
@@ -60,6 +63,11 @@ export default async function InvoiceDetailPage({
   );
 
   return (
+    <InvoiceLiveProvider
+      invoice={invoice}
+      events={events}
+      today={NOW.toISOString().slice(0, 10)}
+    >
     <div className="mx-auto flex max-w-[1400px] flex-col gap-4">
       <Reveal className="space-y-3">
         <Link
@@ -85,7 +93,7 @@ export default async function InvoiceDetailPage({
                 </Link>
               </h1>
               <div className="flex flex-wrap items-center gap-2">
-                <InvoiceStatusBadge status={invoice.status} />
+                <InvoiceLiveStatus />
                 {invoice.status !== "paid" ? (
                   <RiskBadge risk={invoice.risk} />
                 ) : null}
@@ -102,29 +110,13 @@ export default async function InvoiceDetailPage({
               </div>
             </div>
 
-            <div className="shrink-0 lg:text-right">
-              <p className="figure text-h1 leading-none font-semibold">
-                {money(
-                  invoice.status === "paid"
-                    ? invoice.amount_cents
-                    : invoice.balance_cents,
-                )}
-              </p>
-              <p className="text-muted-foreground mt-1 text-caption">
-                {invoice.status === "paid"
-                  ? "paid in full"
-                  : invoice.paid_cents > 0
-                    ? `${money(invoice.paid_cents)} of ${money(invoice.amount_cents)} received`
-                    : `due ${formatDate(invoice.due_date)}`}
-              </p>
-            </div>
+            <InvoiceLiveFigure />
           </div>
 
           <Separator />
 
           <div className="p-3">
-            <InvoiceActions
-              invoice={invoice}
+            <InvoiceLiveActions
               contactName={customer.contact_name}
               today={NOW.toISOString().slice(0, 10)}
             />
@@ -231,7 +223,7 @@ export default async function InvoiceDetailPage({
                 Activity log
               </h2>
               <div className="p-4">
-                <Timeline events={events} />
+                <InvoiceLiveTimeline />
               </div>
             </section>
           </Reveal>
@@ -334,6 +326,7 @@ export default async function InvoiceDetailPage({
         </div>
       </div>
     </div>
+    </InvoiceLiveProvider>
   );
 }
 

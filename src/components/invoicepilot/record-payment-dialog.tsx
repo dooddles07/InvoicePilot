@@ -58,11 +58,14 @@ export function RecordPaymentDialog({
   invoice,
   today,
   trigger,
+  onRecorded,
 }: {
   invoice: Invoice;
   /** Passed in so the default date matches the demo ledger, not the wall clock. */
   today: string;
   trigger?: ReactElement;
+  /** Told what was recorded, so the caller can move its own figures. */
+  onRecorded?: (amountCents: number, receivedOn: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   const balance = invoice.balance_cents;
@@ -84,6 +87,7 @@ export function RecordPaymentDialog({
     const cents = Math.round(Number(values.amount) * 100);
     setOpen(false);
     form.reset();
+    onRecorded?.(cents, values.received_on);
     toast.success("Payment recorded", {
       description: `${money(cents)} received from ${invoice.customer_name}.${
         balance - cents > 0

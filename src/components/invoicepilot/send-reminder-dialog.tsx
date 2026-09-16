@@ -58,12 +58,14 @@ export function SendReminderDialog({
   recommendedTone = "friendly",
   trigger,
   label = "Send reminder",
+  onSent,
 }: {
   invoice: Invoice;
   contactName: string;
   recommendedTone?: Tone;
   trigger?: ReactElement;
   label?: string;
+  onSent?: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const [tone, setTone] = useState<Tone>(recommendedTone);
@@ -144,6 +146,7 @@ export function SendReminderDialog({
             size="sm"
             onClick={() => {
               setOpen(false);
+              onSent?.();
               toast.success("Reminder sent", {
                 description: `${TONE_LABEL[tone]} sent to ${contactName} about ${invoice.number}.`,
               });
