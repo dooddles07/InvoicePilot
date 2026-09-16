@@ -19,18 +19,19 @@ export const TEST_CONFIG = Object.freeze({
   secretKey: "test-only-key-that-is-long-enough-for-hs256",
 });
 
-export async function withApp(fn) {
+export async function withApp(fn, config = TEST_CONFIG) {
   return withRollback(async (tx) => {
-    const server = createApp(TEST_CONFIG, tx).listen(0);
+    const server = createApp(config, tx).listen(0);
     await new Promise((resolve) => server.once("listening", resolve));
     const origin = `http://127.0.0.1:${server.address().port}`;
 
-    async function send(method, path, { body, token } = {}) {
+    async function send(method, path, { body, token, headers } = {}) {
       const response = await fetch(`${origin}${path}`, {
         method,
         headers: {
           "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...headers,
         },
         body: body === undefined ? undefined : JSON.stringify(body),
       });

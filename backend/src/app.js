@@ -1,6 +1,7 @@
 import express from "express";
 
 import { errorHandler } from "./middleware/errors.js";
+import { adminRouter } from "./routes/admin.js";
 import { aiRouter } from "./routes/ai.js";
 import { auditRouter } from "./routes/audit.js";
 import { authRouter } from "./routes/auth.js";
@@ -48,6 +49,7 @@ export function createApp(config, sql) {
     ["/api/ai", aiRouter],
     ["/api/billing", billingRouter],
     ["/api/audit", auditRouter],
+    ["/api/admin", adminRouter],
   ]) {
     app.use(path, router(sql, config));
   }
