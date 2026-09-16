@@ -16,6 +16,7 @@ export const metadata: Metadata = {
   },
   description:
     "InvoicePilot automates accounts receivable, follows up with customers, and gives your team a clear view of cash flow.",
+  twitter: { card: "summary_large_image" },
 };
 
 export const viewport: Viewport = {
