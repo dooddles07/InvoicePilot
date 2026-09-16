@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { ApiError, apiFetch } from "@/lib/api/client";
-import { sessionUserSchema } from "@/lib/api/session";
+import { authResponseSchema } from "@/lib/api/session";
 import {
   clearSessionCookies,
   readRefreshToken,
@@ -21,15 +21,6 @@ import {
 export type ActionResult =
   | { ok: true }
   | { ok: false; message: string; field?: "email" | "password" | "full_name" };
-
-const authResponseSchema = z.object({
-  tokens: z.object({
-    access_token: z.string(),
-    refresh_token: z.string(),
-    expires_in: z.number(),
-  }),
-  user: sessionUserSchema,
-});
 
 // The same rules as the form's Zod schema, restated server-side: a Server
 // Action is a public endpoint, and the client's validation is a convenience.

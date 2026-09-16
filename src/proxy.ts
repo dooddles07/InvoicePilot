@@ -34,7 +34,7 @@ const SIGNED_IN_ROOTS = [
   "/onboarding",
 ];
 
-const SIGNED_OUT_ONLY = ["/login", "/signup", "/forgot-password"];
+const SIGNED_OUT_ONLY = ["/login", "/signup", "/forgot-password", "/demo"];
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;

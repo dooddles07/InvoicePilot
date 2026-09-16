@@ -19,6 +19,17 @@ export const sessionUserSchema = z.object({
 
 export type SessionUser = z.infer<typeof sessionUserSchema>;
 
+/** The shape every token-issuing endpoint returns: login, signup, refresh,
+ *  switch-workspace and the demo entry all answer with this. */
+export const authResponseSchema = z.object({
+  tokens: z.object({
+    access_token: z.string(),
+    refresh_token: z.string(),
+    expires_in: z.number(),
+  }),
+  user: sessionUserSchema,
+});
+
 /**
  * Who is signed in, according to the API.
  *
