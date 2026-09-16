@@ -1467,7 +1467,7 @@ git commit -m "docs: rewrite the README as a project case study"
 
 **Interfaces:** none.
 
-- [ ] **Step 1: Set the new environment variables in Vercel**
+- [x] **Step 1: Set the new environment variables in Vercel**
 
 In the Vercel project settings, add `DEMO_EMAIL` and `DEMO_PASSWORD` for Production (and Preview, if previews are shared). Use the credentials from the backend's `npm run seed` run. If they are unknown, re-run the seeder in `backend/` with fresh ones:
 
