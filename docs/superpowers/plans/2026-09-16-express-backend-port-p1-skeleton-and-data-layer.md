@@ -84,7 +84,7 @@ Root loses `src/server/`, `drizzle/`, `scripts/`, `drizzle.config.ts` and `vites
 - Produces:
   - `loadConfig(env = process.env)` — returns `{ environment: string, port: number, databaseUrl: string, secretKey: string }`. Throws `Error` when `DATABASE_URL` is missing, when `SECRET_KEY` is missing, or when `SECRET_KEY` is shorter than 32 characters.
 
-- [ ] **Step 1: Create the package manifest**
+- [x] **Step 1: Create the package manifest**
 
 Create `backend/package.json`:
 
@@ -112,7 +112,7 @@ Create `backend/package.json`:
 
 `--test-concurrency=1` because every test file shares one migrated database. Files that race to write the same tables produce failures that depend on machine core count.
 
-- [ ] **Step 2: Install the dependencies**
+- [x] **Step 2: Install the dependencies**
 
 Run from `backend/`:
 
@@ -122,7 +122,7 @@ npm install
 
 Expected: `node_modules/` and `package-lock.json` appear under `backend/`.
 
-- [ ] **Step 3: Ignore the installed dependencies**
+- [x] **Step 3: Ignore the installed dependencies**
 
 Append to `backend/.gitignore`:
 
@@ -130,7 +130,7 @@ Append to `backend/.gitignore`:
 node_modules/
 ```
 
-- [ ] **Step 4: Document the environment**
+- [x] **Step 4: Document the environment**
 
 Create `backend/.env.example`:
 
@@ -149,7 +149,7 @@ SECRET_KEY="replace-me-with-at-least-thirty-two-characters"
 PORT=3001
 ```
 
-- [ ] **Step 5: Write the failing test**
+- [x] **Step 5: Write the failing test**
 
 Create `backend/tests/config.test.js`:
 
@@ -214,7 +214,7 @@ describe("loadConfig", () => {
 });
 ```
 
-- [ ] **Step 6: Run the test to verify it fails**
+- [x] **Step 6: Run the test to verify it fails**
 
 Run from `backend/`:
 
@@ -224,7 +224,7 @@ node --test tests/config.test.js
 
 Expected: FAIL with `Cannot find module` for `../src/config.js`.
 
-- [ ] **Step 7: Write the implementation**
+- [x] **Step 7: Write the implementation**
 
 Create `backend/src/config.js`:
 
@@ -265,7 +265,7 @@ export function loadConfig(env = process.env) {
 
 `SECRET_KEY` is required in P1 although nothing reads it yet. The alternative — adding the requirement in P2 — means the first P2 deploy fails at the first login instead of at boot.
 
-- [ ] **Step 8: Run the test to verify it passes**
+- [x] **Step 8: Run the test to verify it passes**
 
 Run from `backend/`:
 
@@ -275,7 +275,7 @@ node --test tests/config.test.js
 
 Expected: PASS, 8 tests.
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add backend/package.json backend/package-lock.json backend/.gitignore backend/.env.example backend/src/config.js backend/tests/config.test.js
@@ -302,7 +302,7 @@ git commit -m "feat: add the Express backend package and its configuration"
   - `assertTestDatabase(url: string): void` — throws unless the database name contains `test`, case-insensitively.
   - `testConnectionString(): string` — returns `process.env.DATABASE_URL` after asserting it is a test database.
 
-- [ ] **Step 1: Move the SQL across, unchanged**
+- [x] **Step 1: Move the SQL across, unchanged**
 
 ```bash
 mkdir -p backend/src/sql
@@ -312,7 +312,7 @@ git mv drizzle/0001_derivation_views.sql backend/src/sql/0001_derivation_views.s
 
 Do not edit either file. They were translated once from the Alembic revisions and frozen; a change here is a schema change, which §14 of the spec puts out of scope.
 
-- [ ] **Step 2: Write the failing guard test**
+- [x] **Step 2: Write the failing guard test**
 
 Create `backend/tests/database.test.js`:
 
@@ -359,7 +359,7 @@ describe("assertTestDatabase", () => {
 });
 ```
 
-- [ ] **Step 3: Run it to verify it fails**
+- [x] **Step 3: Run it to verify it fails**
 
 Run from `backend/`:
 
@@ -369,7 +369,7 @@ node --test tests/database.test.js
 
 Expected: FAIL with `Cannot find module` for `./helpers/database.js`.
 
-- [ ] **Step 4: Write the guard**
+- [x] **Step 4: Write the guard**
 
 Create `backend/tests/helpers/database.js`:
 
@@ -399,7 +399,7 @@ export function testConnectionString() {
 }
 ```
 
-- [ ] **Step 5: Run it to verify it passes**
+- [x] **Step 5: Run it to verify it passes**
 
 Run from `backend/`:
 
@@ -409,7 +409,7 @@ node --test tests/database.test.js
 
 Expected: PASS, 5 tests.
 
-- [ ] **Step 6: Write the failing migration test**
+- [x] **Step 6: Write the failing migration test**
 
 Create `backend/tests/migrate.test.js`:
 
@@ -456,7 +456,7 @@ describe("applyMigrations", () => {
 
 The first two tests assert against the schema `tests/reset.js` already built, so they do not depend on the order files run in.
 
-- [ ] **Step 7: Run it to verify it fails**
+- [x] **Step 7: Run it to verify it fails**
 
 Run from `backend/`:
 
@@ -466,7 +466,7 @@ node --test tests/migrate.test.js
 
 Expected: FAIL with `Cannot find module` for `../src/db/migrate.js`.
 
-- [ ] **Step 8: Write the migration runner**
+- [x] **Step 8: Write the migration runner**
 
 Create `backend/src/db/migrate.js`:
 
@@ -527,7 +527,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
 }
 ```
 
-- [ ] **Step 9: Write the reset script**
+- [x] **Step 9: Write the reset script**
 
 Create `backend/tests/reset.js`:
 
@@ -563,7 +563,7 @@ const applied = await applyMigrations(url);
 console.log(`reset: applied ${applied.join(", ")}`);
 ```
 
-- [ ] **Step 10: Run the whole suite to verify it passes**
+- [x] **Step 10: Run the whole suite to verify it passes**
 
 Run from `backend/`, with `DATABASE_URL` pointing at a local database whose name contains `test`:
 
@@ -573,7 +573,7 @@ npm test
 
 Expected: `reset: applied 0000_schema.sql, 0001_derivation_views.sql`, then PASS across `config.test.js`, `database.test.js` and `migrate.test.js`.
 
-- [ ] **Step 11: Commit**
+- [x] **Step 11: Commit**
 
 ```bash
 git add backend/src/sql backend/src/db/migrate.js backend/tests/helpers/database.js backend/tests/reset.js backend/tests/database.test.js backend/tests/migrate.test.js
@@ -595,7 +595,7 @@ git commit -m "feat: move the schema into the backend and port the migration run
   - `createClient(connectionString: string)` — a new postgres.js client configured `max: 5`, `prepare: false`, with the bigint policy applied.
   - `getSql(connectionString = process.env.DATABASE_URL)` — the memoized application client. Throws when the connection string is empty.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `backend/tests/db.test.js`:
 
@@ -647,7 +647,7 @@ describe("getSql", () => {
 });
 ```
 
-- [ ] **Step 2: Run it to verify it fails**
+- [x] **Step 2: Run it to verify it fails**
 
 Run from `backend/`:
 
@@ -657,7 +657,7 @@ node --test tests/db.test.js
 
 Expected: FAIL with `Cannot find module` for `../src/db/index.js`.
 
-- [ ] **Step 3: Write the client**
+- [x] **Step 3: Write the client**
 
 Create `backend/src/db/index.js`:
 
@@ -715,7 +715,7 @@ export function getSql(connectionString = process.env.DATABASE_URL) {
 
 The empty-string check comes before the memo, so `getSql("")` throws whether or not a client already exists. Checking after the memo would make the test pass or fail on file order.
 
-- [ ] **Step 4: Run it to verify it passes**
+- [x] **Step 4: Run it to verify it passes**
 
 Run from `backend/`:
 
@@ -725,7 +725,7 @@ node --test tests/db.test.js
 
 Expected: PASS, 5 tests.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/src/db/index.js backend/tests/db.test.js
@@ -752,7 +752,7 @@ git commit -m "feat: add the database client and decide bigint parsing once"
 
 There is no separate test for this task. The harness is exercised by every suite in Tasks 5 through 8, and a test of `withRollback` that did not also test a real table would assert nothing the next task does not.
 
-- [ ] **Step 1: Add the shared client and the rollback helper**
+- [x] **Step 1: Add the shared client and the rollback helper**
 
 Append to `backend/tests/helpers/database.js`:
 
@@ -815,7 +815,7 @@ export async function expectConstraintViolation(promise, constraint) {
 
 Put the two `import` lines at the top of the file, above `assertTestDatabase`, and the rest below `testConnectionString`.
 
-- [ ] **Step 2: Write the factories**
+- [x] **Step 2: Write the factories**
 
 Create `backend/tests/helpers/factories.js`:
 
@@ -892,7 +892,7 @@ export async function makeInvoice(tx, workspaceId, customerId, options) {
 
 `NULL::date` rather than a `null` parameter: Postgres cannot infer a parameter's type in that position and answers `could not determine data type of parameter`.
 
-- [ ] **Step 3: Verify the suite still passes**
+- [x] **Step 3: Verify the suite still passes**
 
 Run from `backend/`:
 
@@ -902,7 +902,7 @@ npm test
 
 Expected: PASS. Nothing imports the new helpers yet, so this only proves the files parse.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add backend/tests/helpers
@@ -920,7 +920,7 @@ git commit -m "test: port the rollback harness and the row factories"
 - Consumes: `withRollback`, `expectConstraintViolation`, `sql` from Task 4; `makeWorkspace`, `makeCustomer`, `makeInvoice` from Task 4.
 - Produces: nothing.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `backend/tests/schema.test.js`:
 
@@ -1104,7 +1104,7 @@ describe("communication_logs", () => {
 });
 ```
 
-- [ ] **Step 2: Run it**
+- [x] **Step 2: Run it**
 
 Run from `backend/`:
 
@@ -1114,7 +1114,7 @@ npm test
 
 Expected: PASS, 10 tests in this file. The schema and the harness both already exist, so a failure here is a porting error in Task 4, not a missing implementation — read the failure before changing anything.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add backend/tests/schema.test.js
@@ -1132,7 +1132,7 @@ git commit -m "test: port the schema constraint suite"
 - Consumes: `withRollback`, `sql`, the three factories.
 - Produces: nothing.
 
-- [ ] **Step 1: Write the test**
+- [x] **Step 1: Write the test**
 
 Create `backend/tests/views-invoice-state.test.js`:
 
@@ -1228,7 +1228,7 @@ describe("invoice_state", () => {
 });
 ```
 
-- [ ] **Step 2: Run it**
+- [x] **Step 2: Run it**
 
 Run from `backend/`:
 
@@ -1238,7 +1238,7 @@ npm test
 
 Expected: PASS, 5 tests in this file.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add backend/tests/views-invoice-state.test.js
@@ -1256,7 +1256,7 @@ git commit -m "test: port the invoice_state view suite"
 - Consumes: `withRollback`, `sql`, the three factories.
 - Produces: nothing.
 
-- [ ] **Step 1: Write the test**
+- [x] **Step 1: Write the test**
 
 Create `backend/tests/views-customer-stats.test.js`:
 
@@ -1382,7 +1382,7 @@ describe("customer_stats", () => {
 });
 ```
 
-- [ ] **Step 2: Run it**
+- [x] **Step 2: Run it**
 
 Run from `backend/`:
 
@@ -1392,7 +1392,7 @@ npm test
 
 Expected: PASS, 6 tests in this file.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add backend/tests/views-customer-stats.test.js
@@ -1410,7 +1410,7 @@ git commit -m "test: port the customer_stats view suite"
 - Consumes: `withRollback`, `sql`, the three factories.
 - Produces: nothing.
 
-- [ ] **Step 1: Write the test**
+- [x] **Step 1: Write the test**
 
 Create `backend/tests/views-collection-queue.test.js`:
 
@@ -1489,7 +1489,7 @@ describe("collection_queue", () => {
 });
 ```
 
-- [ ] **Step 2: Run it**
+- [x] **Step 2: Run it**
 
 Run from `backend/`:
 
@@ -1499,7 +1499,7 @@ npm test
 
 Expected: PASS, 3 tests in this file, and green across all eight files.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add backend/tests/views-collection-queue.test.js
@@ -1525,7 +1525,7 @@ git commit -m "test: port the collection_queue view suite"
   - `errorHandler(error, request, response, next)` — the Express error middleware.
   - `createApp(config)` — returns the configured Express application.
 
-- [ ] **Step 1: Write the failing error test**
+- [x] **Step 1: Write the failing error test**
 
 Create `backend/tests/errors.test.js`:
 
@@ -1626,7 +1626,7 @@ describe("errorHandler", () => {
 });
 ```
 
-- [ ] **Step 2: Run it to verify it fails**
+- [x] **Step 2: Run it to verify it fails**
 
 Run from `backend/`:
 
@@ -1636,7 +1636,7 @@ node --test tests/errors.test.js
 
 Expected: FAIL with `Cannot find module` for `../src/middleware/errors.js`.
 
-- [ ] **Step 3: Write the error middleware**
+- [x] **Step 3: Write the error middleware**
 
 Create `backend/src/middleware/errors.js`:
 
@@ -1722,7 +1722,7 @@ export function errorHandler(error, request, response, next) {
 }
 ```
 
-- [ ] **Step 4: Run it to verify it passes**
+- [x] **Step 4: Run it to verify it passes**
 
 Run from `backend/`:
 
@@ -1732,7 +1732,7 @@ node --test tests/errors.test.js
 
 Expected: PASS, 7 tests.
 
-- [ ] **Step 5: Write the failing health test**
+- [x] **Step 5: Write the failing health test**
 
 Create `backend/tests/health.test.js`:
 
@@ -1786,7 +1786,7 @@ describe("an unknown path", () => {
 });
 ```
 
-- [ ] **Step 6: Run it to verify it fails**
+- [x] **Step 6: Run it to verify it fails**
 
 Run from `backend/`:
 
@@ -1796,7 +1796,7 @@ node --test tests/health.test.js
 
 Expected: FAIL with `Cannot find module` for `../src/app.js`.
 
-- [ ] **Step 7: Write the app**
+- [x] **Step 7: Write the app**
 
 Create `backend/src/app.js`:
 
@@ -1830,7 +1830,7 @@ export function createApp(config) {
 }
 ```
 
-- [ ] **Step 8: Write the server entry point**
+- [x] **Step 8: Write the server entry point**
 
 Create `backend/src/server.js`:
 
@@ -1856,7 +1856,7 @@ createApp(config).listen(config.port, () => {
 });
 ```
 
-- [ ] **Step 9: Run the health test to verify it passes**
+- [x] **Step 9: Run the health test to verify it passes**
 
 Run from `backend/`:
 
@@ -1866,7 +1866,7 @@ node --test tests/health.test.js
 
 Expected: PASS, 3 tests.
 
-- [ ] **Step 10: Start the server and check it by hand**
+- [x] **Step 10: Start the server and check it by hand**
 
 Run from `backend/`, with `DATABASE_URL` and `SECRET_KEY` set:
 
@@ -1882,7 +1882,7 @@ curl -s http://127.0.0.1:3001/health
 
 Expected: `{"status":"ok","environment":"local"}`. Stop the server afterwards.
 
-- [ ] **Step 11: Create the fourteen model stubs**
+- [x] **Step 11: Create the fourteen model stubs**
 
 Each file holds only its header comment. They are a map of the schema, and each is filled in by the phase that implements its domain.
 
@@ -1917,7 +1917,7 @@ Create the remaining thirteen with the same shape, changing the first line and t
 | `automations.js` | `Automations.` | no table yet; the schema lands with the automations sub-project |
 | `ai.js` | `AI.` | no table; reads the derivation views |
 
-- [ ] **Step 12: Run the whole suite**
+- [x] **Step 12: Run the whole suite**
 
 Run from `backend/`:
 
@@ -1927,7 +1927,7 @@ npm test
 
 Expected: PASS across all ten files.
 
-- [ ] **Step 13: Commit**
+- [x] **Step 13: Commit**
 
 ```bash
 git add backend/src/middleware backend/src/app.js backend/src/server.js backend/src/models backend/tests/errors.test.js backend/tests/health.test.js
@@ -1950,7 +1950,7 @@ git commit -m "feat: add the error middleware, the Express app, and the model st
 
 No frontend file imports `@/server` or any drizzle package — verified by grep before this plan was written. Step 1 re-checks rather than trusting that.
 
-- [ ] **Step 1: Confirm nothing in the frontend depends on what is about to be deleted**
+- [x] **Step 1: Confirm nothing in the frontend depends on what is about to be deleted**
 
 Run from the repository root:
 
@@ -1960,7 +1960,7 @@ grep -rn "@/server\|drizzle" --include="*.ts" --include="*.tsx" src/ next.config
 
 Expected: no output. Any hit must be resolved before deleting; stop and report it.
 
-- [ ] **Step 2: Delete the TypeScript backend layer**
+- [x] **Step 2: Delete the TypeScript backend layer**
 
 ```bash
 git rm -r src/server drizzle
@@ -1969,7 +1969,7 @@ git rm scripts/migrate.mts drizzle.config.ts vitest.config.mts
 
 `drizzle/` is already empty of SQL after Task 2 moved both files; this removes the directory itself. `scripts/` holds nothing else and disappears with its only file.
 
-- [ ] **Step 3: Prune the root manifest**
+- [x] **Step 3: Prune the root manifest**
 
 In `package.json`, delete the `db:migrate`, `db:pull`, `test` and `test:watch` scripts, and delete `drizzle-orm` and `postgres` from `dependencies` and `drizzle-kit`, `tsx` and `vitest` from `devDependencies`. The scripts block becomes:
 
@@ -1982,7 +1982,7 @@ In `package.json`, delete the `db:migrate`, `db:pull`, `test` and `test:watch` s
   },
 ```
 
-- [ ] **Step 4: Refresh the root lockfile**
+- [x] **Step 4: Refresh the root lockfile**
 
 Run from the repository root:
 
@@ -1992,7 +1992,7 @@ npm install
 
 Expected: `package-lock.json` changes, and `node_modules/drizzle-orm` disappears.
 
-- [ ] **Step 5: Repoint the root environment example**
+- [x] **Step 5: Repoint the root environment example**
 
 Replace the contents of `.env.example` with:
 
@@ -2005,7 +2005,7 @@ API_BASE_URL="http://127.0.0.1:3001"
 
 `DATABASE_URL` moves out of the root entirely — it is documented in `backend/.env.example` and nothing at the root opens a connection any more.
 
-- [ ] **Step 6: Switch CI to two jobs**
+- [x] **Step 6: Switch CI to two jobs**
 
 Replace `.github/workflows/ci.yml` with:
 
@@ -2066,7 +2066,7 @@ The frontend job needs no database now: nothing it builds opens a connection.
 
 This is the deviation recorded under Scope. Spec §13 puts "CI switched" in P3, but Step 3 deletes the root `test` script that the single existing job runs.
 
-- [ ] **Step 7: Verify the frontend still type-checks and builds**
+- [x] **Step 7: Verify the frontend still type-checks and builds**
 
 Run from the repository root:
 
@@ -2077,7 +2077,7 @@ npm run build
 
 Expected: both succeed. `tsc` no longer sees `src/server/` or `scripts/migrate.mts`, and `next build` compiles every route as before.
 
-- [ ] **Step 8: Verify the backend suite still passes**
+- [x] **Step 8: Verify the backend suite still passes**
 
 Run from `backend/`:
 
@@ -2087,7 +2087,7 @@ npm test
 
 Expected: PASS across all ten files.
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 # The deletions are already staged by `git rm`; this picks up the edited files.
