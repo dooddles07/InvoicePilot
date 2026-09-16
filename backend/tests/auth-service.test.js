@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { after, describe, it } from "node:test";
 
 import { Conflict } from "../src/middleware/errors.js";
-import { decodeAccessToken } from "../src/lib/security.js";
+import { decodeAccessToken, hashRefreshToken } from "../src/lib/security.js";
 import { login, signup } from "../src/services/auth.js";
 import { sql, withRollback } from "./helpers/database.js";
 
@@ -218,6 +218,189 @@ describe("login", () => {
       `;
       await assert.rejects(
         () => login(tx, CONFIG, { email: body.email, password: PASSWORD }),
+        (error) => error.status === 401,
+      );
+    });
+  });
+});
+
+import { NotFound } from "../src/middleware/errors.js";
+import {
+  describe as describeSession,
+  logout,
+  refresh,
+  switchWorkspace,
+} from "../src/services/auth.js";
+import {
+  findRefreshTokenByHash,
+  insertWorkspaceMember,
+} from "../src/models/auth.js";
+import { insertWorkspace } from "../src/models/workspaces.js";
+
+// `describe` is node:test's here, so the service's is imported as
+// describeSession above.
+async function principalFor(result) {
+  return decodeAccessToken(result.tokens.access_token, CONFIG.secretKey);
+}
+
+describe("refresh", () => {
+  it("issues a new pair and retires the old one", async () => {
+    await withRollback(async (tx) => {
+      const first = (await signup(tx, CONFIG, signupBody())).tokens;
+      const second = (await refresh(tx, CONFIG, first.refresh_token)).tokens;
+
+      assert.notEqual(second.refresh_token, first.refresh_token);
+      const old = await findRefreshTokenByHash(
+        tx,
+        hashRefreshToken(first.refresh_token),
+      );
+      assert.notEqual(old.revoked_at, null);
+      assert.notEqual(old.replaced_by_id, null);
+    });
+  });
+
+  it("kills the whole chain when a retired token comes back", async () => {
+    // A revoked token being presented means it leaked. Revoking only that row
+    // would leave the thief's newer token alive.
+    await withRollback(async (tx) => {
+      const first = (await signup(tx, CONFIG, signupBody())).tokens;
+      const second = (await refresh(tx, CONFIG, first.refresh_token)).tokens;
+      const third = (await refresh(tx, CONFIG, second.refresh_token)).tokens;
+
+      await assert.rejects(
+        () => refresh(tx, CONFIG, first.refresh_token),
+        (error) => error.status === 401,
+      );
+
+      for (const tokens of [first, second, third]) {
+        const row = await findRefreshTokenByHash(
+          tx,
+          hashRefreshToken(tokens.refresh_token),
+        );
+        assert.notEqual(row.revoked_at, null, tokens.refresh_token);
+      }
+    });
+  });
+
+  it("rejects a token nobody issued", async () => {
+    await withRollback(async (tx) => {
+      await assert.rejects(
+        () => refresh(tx, CONFIG, "not-a-real-token"),
+        (error) => error.status === 401,
+      );
+    });
+  });
+
+  it("rejects an expired token", async () => {
+    await withRollback(async (tx) => {
+      const tokens = (await signup(tx, CONFIG, signupBody())).tokens;
+      await tx`UPDATE refresh_tokens SET expires_at = now() - interval '1 day'`;
+      await assert.rejects(
+        () => refresh(tx, CONFIG, tokens.refresh_token),
+        (error) => error.status === 401,
+      );
+    });
+  });
+});
+
+describe("logout", () => {
+  it("revokes the presented token and no other", async () => {
+    await withRollback(async (tx) => {
+      const mine = (await signup(tx, CONFIG, signupBody())).tokens;
+      const theirs = (await signup(tx, CONFIG, signupBody())).tokens;
+
+      await logout(tx, mine.refresh_token);
+
+      const revoked = await findRefreshTokenByHash(
+        tx,
+        hashRefreshToken(mine.refresh_token),
+      );
+      const untouched = await findRefreshTokenByHash(
+        tx,
+        hashRefreshToken(theirs.refresh_token),
+      );
+      assert.notEqual(revoked.revoked_at, null);
+      assert.equal(untouched.revoked_at, null);
+    });
+  });
+
+  it("is not an error twice, or for a token nobody issued", async () => {
+    // The Server Action clears cookies and calls this; a second click must not
+    // produce a 401 page for someone who is already signed out.
+    await withRollback(async (tx) => {
+      const tokens = (await signup(tx, CONFIG, signupBody())).tokens;
+      await logout(tx, tokens.refresh_token);
+      await logout(tx, tokens.refresh_token);
+      await logout(tx, "not-a-real-token");
+    });
+  });
+});
+
+describe("switchWorkspace", () => {
+  it("issues a token for the new scope, with the role it carries there", async () => {
+    await withRollback(async (tx) => {
+      const result = await signup(tx, CONFIG, signupBody());
+      const principal = await principalFor(result);
+
+      const other = await insertWorkspace(tx, {
+        id: randomUUID(),
+        name: "Client co",
+        slug: `client-${randomUUID().slice(0, 8)}`,
+      });
+      await insertWorkspaceMember(tx, {
+        id: randomUUID(),
+        workspaceId: other.id,
+        userId: principal.userId,
+        role: "viewer",
+        status: "active",
+      });
+
+      const switched = await switchWorkspace(tx, CONFIG, principal, other.id);
+      const after = await principalFor(switched);
+      assert.equal(after.workspaceId, other.id);
+      // The role travels with the workspace: an owner elsewhere is a viewer here.
+      assert.equal(after.role, "viewer");
+      assert.equal(switched.user.workspace_name, "Client co");
+    });
+  });
+
+  it("answers not found for a workspace you do not belong to", async () => {
+    // 404 rather than 403: a 403 confirms that workspace id exists.
+    await withRollback(async (tx) => {
+      const principal = await principalFor(await signup(tx, CONFIG, signupBody()));
+      await assert.rejects(
+        () => switchWorkspace(tx, CONFIG, principal, randomUUID()),
+        NotFound,
+      );
+    });
+  });
+});
+
+describe("describe", () => {
+  it("renders the principal as the session the shell is built from", async () => {
+    await withRollback(async (tx) => {
+      const body = signupBody();
+      const result = await signup(tx, CONFIG, body);
+      const session = await describeSession(tx, await principalFor(result));
+
+      assert.deepEqual(session, {
+        id: result.user.id,
+        email: body.email,
+        full_name: "Ada Lovelace",
+        avatar_url: null,
+        workspace_id: result.user.workspace_id,
+        workspace_name: "Ada's workspace",
+        role: "owner",
+      });
+    });
+  });
+
+  it("refuses a principal whose user is gone", async () => {
+    await withRollback(async (tx) => {
+      const principal = await principalFor(await signup(tx, CONFIG, signupBody()));
+      await tx`DELETE FROM users WHERE id = ${principal.userId}`;
+      await assert.rejects(
+        () => describeSession(tx, principal),
         (error) => error.status === 401,
       );
     });

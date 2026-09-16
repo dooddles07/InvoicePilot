@@ -25,16 +25,22 @@ import {
 import {
   AuthenticationFailed,
   Conflict,
+  NotFound,
 } from "../middleware/errors.js";
 import {
   findActiveMembership,
+  findRefreshTokenByHash,
+  findRefreshTokenById,
   findUserByEmail,
+  findUserById,
   insertRefreshToken,
   insertUser,
   insertWorkspaceMember,
+  revokeRefreshToken,
+  setRefreshTokenReplacedBy,
 } from "../models/auth.js";
 import { insertEmailTemplates } from "../models/notifications.js";
-import { insertWorkspace } from "../models/workspaces.js";
+import { findWorkspaceById, insertWorkspace } from "../models/workspaces.js";
 
 function slugify(name) {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "workspace";
@@ -147,4 +153,101 @@ export async function login(sql, config, body) {
     membership.role,
   );
   return result;
+}
+
+/** Walk replaced_by_id forward and revoke everything it reaches. */
+async function revokeChain(sql, row) {
+  const now = new Date();
+  const seen = new Set();
+  let current = row;
+
+  while (current && !seen.has(current.id)) {
+    seen.add(current.id);
+    if (current.revoked_at === null) {
+      await revokeRefreshToken(sql, current.id, now);
+    }
+    current = current.replaced_by_id
+      ? await findRefreshTokenById(sql, current.replaced_by_id)
+      : undefined;
+  }
+}
+
+export async function refresh(sql, config, token) {
+  const row = await findRefreshTokenByHash(sql, hashRefreshToken(token));
+  if (!row) throw new AuthenticationFailed();
+
+  if (row.revoked_at !== null) {
+    // Presented after it was retired: either a replay or a stolen token.
+    // Either way every session descended from it is suspect, so the whole
+    // chain goes -- and it must stay gone after the throw below, which is why
+    // nothing here runs inside a transaction.
+    await revokeChain(sql, row);
+    throw new AuthenticationFailed();
+  }
+
+  if (row.expires_at <= new Date()) throw new AuthenticationFailed();
+
+  const user = await findUserById(sql, row.user_id);
+  if (!user) throw new AuthenticationFailed();
+
+  const membership = await findActiveMembership(sql, user.id);
+  if (!membership) throw new AuthenticationFailed();
+
+  const { result, refreshTokenId } = await issue(
+    sql,
+    config,
+    user,
+    { id: membership.workspace_id, name: membership.workspace_name },
+    membership.role,
+  );
+
+  await revokeRefreshToken(sql, row.id, new Date());
+  await setRefreshTokenReplacedBy(sql, row.id, refreshTokenId);
+  return result;
+}
+
+/**
+ * Signing out an already-dead session is not an error: the caller's intent --
+ * be signed out -- is satisfied either way.
+ */
+export async function logout(sql, token) {
+  const row = await findRefreshTokenByHash(sql, hashRefreshToken(token));
+  if (row && row.revoked_at === null) {
+    await revokeRefreshToken(sql, row.id, new Date());
+  }
+}
+
+export async function switchWorkspace(sql, config, principal, workspaceId) {
+  const user = await findUserById(sql, principal.userId);
+  if (!user) throw new AuthenticationFailed();
+
+  const membership = await findActiveMembership(sql, user.id, workspaceId);
+  // 404, not 403: a 403 would confirm the workspace exists.
+  if (!membership) throw new NotFound("Workspace not found");
+
+  const { result } = await issue(
+    sql,
+    config,
+    user,
+    { id: membership.workspace_id, name: membership.workspace_name },
+    membership.role,
+  );
+  return result;
+}
+
+/** Render a principal as the session the frontend builds its shell from. */
+export async function describe(sql, principal) {
+  const user = await findUserById(sql, principal.userId);
+  const workspace = await findWorkspaceById(sql, principal.workspaceId);
+  if (!user || !workspace) throw new AuthenticationFailed();
+
+  return {
+    id: user.id,
+    email: user.email,
+    full_name: user.full_name,
+    avatar_url: user.avatar_url ?? null,
+    workspace_id: workspace.id,
+    workspace_name: workspace.name,
+    role: principal.role,
+  };
 }
