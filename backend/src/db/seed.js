@@ -26,6 +26,9 @@
  *   Both sum to the total; the even split removes a source of drift and
  *   nothing downstream reads an individual item amount.
  */
+import { randomUUID } from "node:crypto";
+
+import { insertEmailTemplates } from "../models/notifications.js";
 
 export const SEED = 0x0001_9f0c;
 export const INVOICE_COUNT = 460;
@@ -228,4 +231,200 @@ export function buildDrafts(rng, now) {
   // ledger stays reproducible.
   drafts.sort((a, b) => a.issue - b.issue);
   return drafts;
+}
+
+/**
+ * Deterministic, so a reseed keeps the same slug and nothing bookmarked
+ * breaks. Unique, because workspaces.slug is unique.
+ */
+export const slugFor = (workspaceId) => `meridian-studio-${workspaceId.slice(0, 8)}`;
+
+/**
+ * postgres.js builds one multi-row INSERT per call. Chunked because a single
+ * statement is capped at 65535 bound parameters, and collection_events is a
+ * few thousand rows wide of ten columns each.
+ */
+async function insertRows(sql, table, rows, chunkSize = 500) {
+  for (let index = 0; index < rows.length; index += chunkSize) {
+    await sql`INSERT INTO ${sql(table)} ${sql(rows.slice(index, index + chunkSize))}`;
+  }
+  return rows.length;
+}
+
+/**
+ * Write the demo ledger into `workspaceId`, owned by `ownerUserId`.
+ *
+ * Takes a handle and opens no transaction: the caller owns atomicity, which is
+ * what lets a test roll the whole ledger back. The user row is the caller's to
+ * create -- it is not workspace-scoped, and a reseed deliberately leaves it
+ * alone so the demo password survives.
+ */
+export async function seedDemoWorkspace(
+  sql,
+  { workspaceId, ownerUserId, role = "admin", now = anchorDate() },
+) {
+  const rng = makeRng(SEED);
+
+  await sql`
+    INSERT INTO workspaces (id, name, slug, plan, currency)
+    VALUES (${workspaceId}, 'Meridian Studio', ${slugFor(workspaceId)}, 'professional', 'USD')
+  `;
+
+  // admin, not owner: the demo visitor must be able to write, and owner would
+  // also grant billing:write, which belongs to a parked preview screen.
+  await sql`
+    INSERT INTO workspace_members (id, workspace_id, user_id, role, status)
+    VALUES (${randomUUID()}, ${workspaceId}, ${ownerUserId}, ${role}, 'active')
+  `;
+
+  await insertEmailTemplates(sql, workspaceId);
+
+  const customerIds = CUSTOMER_SEEDS.map(() => randomUUID());
+  const customers = CUSTOMER_SEEDS.map((seed, index) => ({
+    id: customerIds[index],
+    workspace_id: workspaceId,
+    name: seed.name,
+    contact_name: seed.contact,
+    email: `${seed.contact.split(" ")[0].toLowerCase()}@${seed.domain}`,
+    phone: `+1 (${rng.intBetween(201, 989)}) ${rng.intBetween(200, 999)}-${String(rng.intBetween(1000, 9999)).padStart(4, "0")}`,
+    industry: seed.industry,
+    payment_terms_days: seed.terms,
+    customer_since: isoDate(addDays(now, -rng.intBetween(LEDGER_START_DAYS, LEDGER_START_DAYS + 900))),
+  }));
+  await insertRows(sql, "customers", customers);
+
+  const drafts = buildDrafts(rng, now);
+
+  const invoiceIds = drafts.map(() => randomUUID());
+  const invoices = [];
+  const items = [];
+  let sequence = 380;
+
+  drafts.forEach((draft, index) => {
+    sequence += 1;
+    const invoiceId = invoiceIds[index];
+
+    const itemCount = rng.intBetween(1, 4);
+    const pool = LINE_ITEMS[draft.seed.industry] ?? LINE_ITEMS.default;
+    splitIntoItems(draft.amountCents, itemCount).forEach((share, position) => {
+      const quantity = rng.intBetween(1, 12);
+      items.push({
+        id: randomUUID(),
+        workspace_id: workspaceId,
+        invoice_id: invoiceId,
+        description: pool[position % pool.length],
+        quantity,
+        // amount_cents (share) is the number that must sum to the invoice
+        // total -- that is the tested invariant. Integer division can leave
+        // unit_price_cents * quantity a cent or two off share; unit_price_cents
+        // is cosmetic and nothing recomputes a line total from it.
+        unit_price_cents: Math.floor(share / quantity),
+        amount_cents: share,
+      });
+    });
+
+    const daysOverdue = draft.status === "paid" ? 0 : dayDiff(now, draft.due);
+    const lastContactedAt =
+      daysOverdue > 3
+        ? addDays(now, -rng.intBetween(1, Math.min(daysOverdue, 21)))
+        : null;
+    const poNumber = rng.next() < 0.45 ? `PO-${rng.intBetween(10000, 99999)}` : null;
+
+    invoices.push({
+      id: invoiceId,
+      workspace_id: workspaceId,
+      number: `INV-${draft.issue.getUTCFullYear()}-${String(sequence).padStart(5, "0")}`,
+      customer_id: customerIds[draft.customerIndex],
+      status: draft.status,
+      amount_cents: draft.amountCents,
+      paid_cents: draft.paidCents,
+      issue_date: isoDate(draft.issue),
+      due_date: isoDate(draft.due),
+      paid_date: draft.paid ? isoDate(draft.paid) : null,
+      po_number: poNumber,
+      sent_at: draft.status === "draft" ? null : draft.issue,
+      viewed_at: ["viewed", "partially_paid", "paid", "disputed"].includes(draft.status)
+        ? addDays(draft.issue, 1)
+        : null,
+      last_contacted_at: lastContactedAt,
+    });
+  });
+
+  await insertRows(sql, "invoices", invoices);
+  await insertRows(sql, "invoice_items", items);
+
+  const payments = [];
+  drafts.forEach((draft, index) => {
+    if (draft.paidCents <= 0) return;
+    const receivedAt = draft.paid ?? addDays(now, -rng.intBetween(1, 20));
+    payments.push({
+      id: randomUUID(),
+      workspace_id: workspaceId,
+      invoice_id: invoiceIds[index],
+      customer_id: customerIds[draft.customerIndex],
+      amount_cents: draft.paidCents,
+      method: rng.pick(METHODS),
+      reference: `${rng.pick(["TXN", "REF", "BAT"])}-${rng.intBetween(100000, 999999)}`,
+      received_at: receivedAt,
+    });
+  });
+  await insertRows(sql, "payments", payments);
+
+  const events = [];
+  drafts.forEach((draft, index) => {
+    if (draft.status === "draft") return;
+
+    const invoiceId = invoiceIds[index];
+    const customerId = customerIds[draft.customerIndex];
+    const customerName = draft.seed.name;
+    const push = (type, occurredAt, channel, actor, detail = null) => {
+      events.push({
+        id: randomUUID(),
+        workspace_id: workspaceId,
+        invoice_id: invoiceId,
+        customer_id: customerId,
+        type,
+        channel,
+        summary: EVENT_SUMMARY[type],
+        detail,
+        actor,
+        occurred_at: occurredAt,
+      });
+    };
+
+    push("invoice_sent", draft.issue, "email", "InvoicePilot");
+    if (rng.next() < 0.82) {
+      push("invoice_viewed", addDays(draft.issue, rng.intBetween(1, 4)), "system", customerName);
+    }
+
+    const daysOverdue = draft.status === "paid" ? 0 : dayDiff(now, draft.due);
+    if (daysOverdue > 1) {
+      push("automation_ran", addDays(draft.due, 1), "system", "Friendly Payment Reminder", "Triggered 1 day after due date.");
+      push("reminder_sent", addDays(draft.due, 1), "email", "InvoicePilot", `Reminder sent to ${customerName} accounts payable.`);
+    }
+    if (daysOverdue > 9) {
+      push("reminder_sent", addDays(draft.due, 8), "email", "Priya Raman", "Second reminder, firmer tone.");
+    }
+    if (daysOverdue > 22) {
+      push("call_logged", addDays(draft.due, 19), "phone", "Tom Okafor", "Left voicemail with AP; callback promised.");
+    }
+    if (daysOverdue > 35) {
+      push("escalation_sent", addDays(draft.due, 32), "email", "Alex Mercer", "Escalated to finance director.");
+    }
+    if (draft.status === "disputed") {
+      push("dispute_raised", addDays(draft.due, rng.intBetween(2, 12)), "email", customerName, "Line item quantity queried.");
+    }
+    if (draft.paid) {
+      push("payment_received", draft.paid, "system", "InvoicePilot");
+    }
+  });
+  await insertRows(sql, "collection_events", events);
+
+  return {
+    customers: customers.length,
+    invoices: invoices.length,
+    items: items.length,
+    payments: payments.length,
+    events: events.length,
+  };
 }
