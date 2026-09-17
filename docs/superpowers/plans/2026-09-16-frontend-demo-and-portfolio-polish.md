@@ -1489,7 +1489,7 @@ Leave the Render service idle for more than fifteen minutes. Then, in a private 
 
 Expected: the waking screen shows, then the dashboard loads. If the attempt instead fails at roughly ten seconds, the server action is being cut off by the platform's default function timeout rather than by Render: move the login call from `enterDemo()` into a `POST /api/demo` route handler that also exports `maxDuration = 60`, and have `DemoEntry` fetch it. The cookie writes are valid in a route handler.
 
-- [ ] **Step 4: Time a warm demo entry**
+- [x] **Step 4: Time a warm demo entry**
 
 Open the production landing page, wait ten seconds, then click "View live demo".
 Expected: the dashboard appears in about a second — the warm-up already paid the wake.
@@ -1498,7 +1498,7 @@ Expected: the dashboard appears in about a second — the warm-up already paid t
 
 Create an UptimeRobot (or equivalent) HTTP monitor against `https://invoicepilot-0sc2.onrender.com/health` at a 5-minute interval. This closes the open item recorded in `docs/superpowers/plans/2026-09-16-express-backend-port-p3-seeder-and-deployment.md`, and it also protects the 04:00 UTC reseed cron from paying a cold start against its 60-second ceiling.
 
-- [ ] **Step 6: Walk the demo as a visitor would**
+- [x] **Step 6: Walk the demo as a visitor would**
 
 On production, signed in as the demo user:
 
@@ -1507,17 +1507,17 @@ On production, signed in as the demo user:
 - `/collections`: drag a card between stages.
 - Check every one of the six application areas in the sidebar loads without an error boundary.
 
-- [ ] **Step 7: Check the link preview**
+- [x] **Step 7: Check the link preview**
 
 Paste the production URL into a link-preview validator, or into a draft LinkedIn post.
 Expected: the 1200×630 card renders with the title and description, from an absolute URL on the production domain.
 
-- [ ] **Step 8: Check phone width**
+- [x] **Step 8: Check phone width**
 
 At 390px wide, load `/demo`, `/dashboard` and `/invoices`.
 Expected: no horizontal scroll, the bottom navigation is reachable, and the KPI cards sit two-up as `design-system/invoicepilot/MASTER.md` specifies.
 
-- [ ] **Step 9: Run Lighthouse on the landing page**
+- [x] **Step 9: Run Lighthouse on the landing page**
 
 Run Lighthouse against the production landing page in Chrome DevTools.
 Expected: performance, accessibility, best-practices and SEO all at or above 90. Record any category that falls short, with its top opportunity, rather than fixing it here — a fix belongs to its own task.
