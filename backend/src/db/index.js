@@ -23,6 +23,15 @@ export const bigintAsNumber = {
 };
 
 /**
+ * postgres.js parses a `date` column into a JS Date by default. Handing that
+ * to res.json() serializes it through Date.prototype.toJSON(), which adds a
+ * time and a "Z" -- a calendar date gains a timezone it never had, and every
+ * consumer that formats issue_date/due_date/paid_date now has to reason about
+ * one. Kept as the wire string instead: already exactly `YYYY-MM-DD`.
+ */
+const dateAsString = { to: 1082, from: [1082], serialize: (value) => value, parse: (value) => value };
+
+/**
  * max: 5 because Render runs one long-lived process, not a serverless function,
  * so it should hold a small pool. prepare: false because Neon's pooled endpoint
  * runs PgBouncer in transaction mode, which rejects prepared statements.
@@ -31,7 +40,7 @@ export function createClient(connectionString) {
   return postgres(connectionString, {
     max: 5,
     prepare: false,
-    types: { bigint: bigintAsNumber },
+    types: { bigint: bigintAsNumber, date: dateAsString },
   });
 }
 
