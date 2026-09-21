@@ -4,16 +4,13 @@ import { TopBar, type Notification } from "@/components/shell/top-bar";
 import type { CommandTarget } from "@/components/shell/command-menu";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { DemoBanner } from "@/components/invoicepilot/demo-banner";
-import { customers } from "@/lib/data";
+import { getCustomers } from "@/lib/api/customers";
 import { getInvoices } from "@/lib/api/invoices";
 import { money } from "@/lib/format";
 import { requireSession } from "@/lib/api/session";
 import type { Workspace } from "@/types";
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
-  // Invoices are real as of Phase 2; customers stay fixtures until Phase 3
-  // converts /customers, so commandCustomers below is the one thing here
-  // still reading from the seed.
   const session = await requireSession();
 
   const currentUser = {
@@ -32,12 +29,13 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   const workspaces = [activeWorkspace];
 
   // The shell is a Server Component: search targets and counts are computed
-  // once here rather than shipping the whole ledger to the client. Two calls,
-  // not three: the overdue-ranked fetch below supplies both the notification
+  // once here rather than shipping the whole ledger to the client. Three
+  // calls, not four: the overdue-ranked fetch supplies both the notification
   // list and, from its `total`, the overdue count -- no separate count query.
-  const [commandInvoicesResult, overdueResult] = await Promise.all([
+  const [commandInvoicesResult, overdueResult, commandCustomersResult] = await Promise.all([
     getInvoices({ limit: 40 }),
     getInvoices({ overdue: true, sort: "balance_cents", order: "desc", limit: 4 }),
+    getCustomers({ limit: 40 }),
   ]);
 
   const commandInvoices: CommandTarget[] = commandInvoicesResult.data.map((i) => ({
@@ -48,7 +46,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
     amount_cents: i.balance_cents || i.amount_cents,
   }));
 
-  const commandCustomers: CommandTarget[] = customers.slice(0, 40).map((c) => ({
+  const commandCustomers: CommandTarget[] = commandCustomersResult.data.map((c) => ({
     id: c.id,
     label: c.name,
     sublabel: `${c.open_invoice_count} open · ${money(c.outstanding_cents)}`,
