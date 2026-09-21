@@ -1,14 +1,16 @@
 import { Router } from "express";
 
-import * as controller from "../controllers/reports.js";
+import { reportsController } from "../controllers/reports.js";
 import { authenticate } from "../middleware/authenticate.js";
 import { requirePermission } from "../middleware/require.js";
 
 export function reportsRouter(sql, config) {
+  const controller = reportsController(sql);
   const router = Router();
   router.use(authenticate(config.secretKey));
   router.use(requirePermission("report:read"));
 
+  router.get("/summary", controller.summary);
   router.get("/aging", controller.aging);
   router.get("/cash-flow", controller.cashFlow);
   router.get("/collection-rate", controller.collectionRate);
