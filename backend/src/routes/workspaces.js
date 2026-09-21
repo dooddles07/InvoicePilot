@@ -1,10 +1,11 @@
 import { Router } from "express";
 
-import * as controller from "../controllers/workspaces.js";
+import { workspacesController } from "../controllers/workspaces.js";
 import { authenticate } from "../middleware/authenticate.js";
 import { requirePermission } from "../middleware/require.js";
 
 export function workspacesRouter(sql, config) {
+  const controller = workspacesController(sql);
   const router = Router();
   router.use(authenticate(config.secretKey));
 

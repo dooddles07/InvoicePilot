@@ -19,6 +19,29 @@ export async function findWorkspaceById(sql, id) {
   return row;
 }
 
+/** Only members with a real user behind them -- a pending invite (user_id
+ *  IS NULL, held on invited_email) has no User to nest, and the response
+ *  type requires one. "Team members" reads as people with access, which a
+ *  pending invite is not yet. */
+export async function listMembers(sql, workspaceId) {
+  const rows = await sql`
+    SELECT m.id, m.workspace_id, m.role, m.status, m.last_active_at,
+      u.id AS user_id, u.email, u.full_name, u.avatar_url
+    FROM workspace_members m
+    JOIN users u ON u.id = m.user_id
+    WHERE m.workspace_id = ${workspaceId} AND m.user_id IS NOT NULL
+    ORDER BY m.created_at
+  `;
+  return rows.map((r) => ({
+    id: r.id,
+    workspace_id: r.workspace_id,
+    user: { id: r.user_id, email: r.email, full_name: r.full_name, avatar_url: r.avatar_url },
+    role: r.role,
+    status: r.status,
+    last_active_at: r.last_active_at,
+  }));
+}
+
 /**
  * The oldest member with a real user behind it. The reseed needs to know who
  * owns the rebuilt workspace, and the answer is whoever owned the old one.
