@@ -8,6 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "typecheck": "next typegen && tsc --noEmit",
     "test": "node --test \"src/lib/data/**/*.test.ts\""
   },
   "dependencies": {
