@@ -213,11 +213,27 @@ export interface Automation {
   description: string;
   enabled: boolean;
   trigger_label: string;
+  /** What the daily evaluator actually reads. The node graph below is
+   *  edited freely and saved faithfully but does not drive execution --
+   *  see backend/src/services/automations.js. */
+  trigger_days: number;
+  tone: "friendly" | "firm" | "final";
   nodes: AutomationNode[];
   runs_30d: number;
   recovered_cents_30d: number;
   last_run_at: ISODate | null;
   created_at: ISODate;
+  updated_at: ISODate;
+}
+
+export interface AutomationRun {
+  id: UUID;
+  workspace_id: UUID;
+  automation_id: UUID;
+  matched_count: number;
+  sent_count: number;
+  started_at: ISODate;
+  finished_at: ISODate | null;
 }
 
 export interface AutomationTemplate {
@@ -372,6 +388,8 @@ export interface ApiKey {
   created_at: ISODate;
   last_used_at: ISODate | null;
 }
+
+export const WEBHOOK_EVENTS = ["payment.received", "invoice.sent", "reminder.sent"] as const;
 
 export interface WebhookEndpoint {
   id: UUID;
