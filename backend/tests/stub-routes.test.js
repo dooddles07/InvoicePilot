@@ -122,6 +122,10 @@ const REAL = new Set([
 
   // payments-routes.test.js
   key("GET", "/api/payments"),
+
+  // collections-routes.test.js
+  key("GET", "/api/collections/pipeline"),
+  key("GET", "/api/collections/queue"),
 ]);
 
 const NOT_IMPLEMENTED = new Set(
@@ -174,7 +178,7 @@ describe("the endpoint inventory", () => {
   });
 
   it("tracks exactly the endpoints still not implemented", () => {
-    assert.equal(NOT_IMPLEMENTED.size, 42);
+    assert.equal(NOT_IMPLEMENTED.size, 40);
   });
 });
 
