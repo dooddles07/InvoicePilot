@@ -3,21 +3,30 @@ import type { Metadata } from "next";
 import { PipelineBoard } from "@/components/collections/pipeline-board";
 import { PageHeader } from "@/components/invoicepilot/page-header";
 import { Reveal } from "@/components/motion/reveal";
-import { getPipeline, overdueInvoices } from "@/lib/data";
+import { handleReadError } from "@/lib/api/client";
+import { getPipeline } from "@/lib/api/collections";
+import { COLLECTION_STAGES } from "@/lib/data";
 import { money } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Collections" };
 
-export default function CollectionsPage() {
-  // The board only carries the four fields a card shows, but the stages are
-  // computed from the same ledger the dashboard aging report uses.
-  const columns = getPipeline().map(({ key, label, invoices, total_cents }) => ({
-    key,
-    label,
-    invoices,
-    total_cents,
-  }));
+export default async function CollectionsPage() {
+  // The board only carries the four fields a card shows; stage labels and
+  // column order are UI config (COLLECTION_STAGES), grouping the API's flat
+  // list is this page's job, not the backend's.
+  const { data: invoices } = await getPipeline().catch(handleReadError);
 
+  const columns = COLLECTION_STAGES.map(({ key, label }) => {
+    const stageInvoices = invoices.filter((i) => i.stage === key);
+    return {
+      key,
+      label,
+      invoices: stageInvoices,
+      total_cents: stageInvoices.reduce((s, i) => s + i.balance_cents, 0),
+    };
+  });
+
+  const overdueInvoices = invoices.filter((i) => i.is_overdue);
   const overdue = overdueInvoices.reduce((s, i) => s + i.balance_cents, 0);
 
   return (
