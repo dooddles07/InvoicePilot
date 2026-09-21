@@ -72,6 +72,7 @@ const ENDPOINTS = [
   ["POST", "/api/notifications/read", null],
   ["GET", "/api/notifications/preferences", null],
   ["PUT", "/api/notifications/preferences", null],
+  ["GET", "/api/notifications/templates", "invoice:read"],
 
   ["GET", "/api/reports/summary", "report:read"],
   ["GET", "/api/reports/aging", "report:read"],
@@ -141,6 +142,18 @@ const REAL = new Set([
   key("GET", "/api/reports/summary"),
   key("GET", "/api/reports/aging"),
   key("GET", "/api/reports/cash-flow"),
+
+  // workspaces-routes.test.js
+  key("GET", "/api/workspaces/ws-1/members"),
+
+  // notifications-routes.test.js
+  key("GET", "/api/notifications/templates"),
+
+  // ai-routes.test.js
+  key("POST", "/api/ai/ask"),
+
+  // audit-routes.test.js
+  key("GET", "/api/audit"),
 ]);
 
 const NOT_IMPLEMENTED = new Set(
@@ -188,12 +201,12 @@ function send(method, path, token) {
 const stubs = ENDPOINTS.filter(([method, path]) => NOT_IMPLEMENTED.has(key(method, path)));
 
 describe("the endpoint inventory", () => {
-  it("is 59 endpoints -- the spec's 55 plus four the port added", () => {
-    assert.equal(ENDPOINTS.length, 59);
+  it("is 60 endpoints -- the spec's 55 plus five the port added", () => {
+    assert.equal(ENDPOINTS.length, 60);
   });
 
   it("tracks exactly the endpoints still not implemented", () => {
-    assert.equal(NOT_IMPLEMENTED.size, 33);
+    assert.equal(NOT_IMPLEMENTED.size, 30);
   });
 });
 
