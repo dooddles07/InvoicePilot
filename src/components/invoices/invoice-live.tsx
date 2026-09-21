@@ -120,7 +120,8 @@ export function InvoiceLiveFigure() {
 }
 
 export function InvoiceLiveStatus() {
-  return <InvoiceStatusBadge status={useLive().invoice.status} />;
+  const invoice = useLive().invoice;
+  return <InvoiceStatusBadge status={invoice.status} isOverdue={invoice.is_overdue} />;
 }
 
 export function InvoiceLiveActions({ contactName, today }: {

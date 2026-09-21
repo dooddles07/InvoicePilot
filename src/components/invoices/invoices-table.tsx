@@ -66,13 +66,14 @@ import { formatDateShort, money, dueLabel } from "@/lib/format";
 import type { Invoice, InvoiceStatus, RiskLevel } from "@/types";
 import { cn } from "@/lib/utils";
 
+// No "Overdue" row: the Age filter's "Overdue only" already covers it, and
+// the API status enum has no such value -- is_overdue is a separate field.
 const STATUS_OPTIONS: { value: InvoiceStatus | "all"; label: string }[] = [
   { value: "all", label: "All statuses" },
   { value: "draft", label: "Draft" },
   { value: "sent", label: "Sent" },
   { value: "viewed", label: "Viewed" },
   { value: "partially_paid", label: "Partially paid" },
-  { value: "overdue", label: "Overdue" },
   { value: "disputed", label: "Disputed" },
   { value: "paid", label: "Paid" },
 ];
@@ -259,7 +260,12 @@ export function InvoicesTable({
         enableSorting: false,
         filterFn: (row, _id, value: string) => row.original.status === value,
         header: () => <span className={HEAD_LABEL}>Status</span>,
-        cell: ({ row }) => <InvoiceStatusBadge status={row.original.status} />,
+        cell: ({ row }) => (
+          <InvoiceStatusBadge
+            status={row.original.status}
+            isOverdue={row.original.is_overdue}
+          />
+        ),
       },
       {
         accessorKey: "risk",
@@ -638,7 +644,7 @@ export function InvoicesTable({
                       </span>
                     </div>
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <InvoiceStatusBadge status={inv.status} />
+                      <InvoiceStatusBadge status={inv.status} isOverdue={inv.is_overdue} />
                       <RiskBadge risk={inv.risk} />
                       <span
                         className={cn(

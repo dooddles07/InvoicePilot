@@ -89,12 +89,19 @@ const base =
 
 export function InvoiceStatusBadge({
   status,
+  isOverdue = false,
   className,
 }: {
   status: InvoiceStatus;
+  /** The API never returns "overdue" as a status -- it returns is_overdue
+   *  alongside the real one. Fixtures do the opposite, encoding it directly
+   *  as a status value, so this defaults to false and lets that keep working
+   *  unchanged: a fixture row's own status resolves "overdue" on its own. */
+  isOverdue?: boolean;
   className?: string;
 }) {
-  const { label, icon: Icon, className: tone } = STATUS[status];
+  const resolved = isOverdue && status !== "paid" ? "overdue" : status;
+  const { label, icon: Icon, className: tone } = STATUS[resolved];
   return (
     <span className={cn(base, tone, className)}>
       <Icon className="size-3 shrink-0" aria-hidden />
