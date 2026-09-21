@@ -7,12 +7,15 @@ import { LinkButton } from "@/components/invoicepilot/link-button";
 import { PageHeader } from "@/components/invoicepilot/page-header";
 import { Reveal, Stagger, StaggerItem } from "@/components/motion/reveal";
 import { Badge } from "@/components/ui/badge";
-import { automations, automationTemplates } from "@/lib/data";
+import { handleReadError } from "@/lib/api/client";
+import { getAutomations } from "@/lib/api/automations";
+import { automationTemplates } from "@/lib/data";
 import { formatDate, money } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Automation" };
 
-export default function AutomationsPage() {
+export default async function AutomationsPage() {
+  const { data: automations } = await getAutomations().catch(handleReadError);
   const recovered = automations.reduce((s, a) => s + a.recovered_cents_30d, 0);
   const runs = automations.reduce((s, a) => s + a.runs_30d, 0);
 

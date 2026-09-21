@@ -1,15 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 
 import { AutomationBuilder } from "@/components/automations/automation-builder";
 import { Reveal } from "@/components/motion/reveal";
-import { automations, getAutomation } from "@/lib/data";
-
-export async function generateStaticParams() {
-  return automations.map((a) => ({ id: a.id }));
-}
+import { handleReadError } from "@/lib/api/client";
+import { getAutomation } from "@/lib/api/automations";
 
 export async function generateMetadata({
   params,
@@ -17,7 +13,8 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
-  return { title: getAutomation(id)?.name ?? "Automation" };
+  const automation = await getAutomation(id).catch(() => null);
+  return { title: automation?.name ?? "Automation" };
 }
 
 export default async function AutomationDetailPage({
@@ -26,8 +23,7 @@ export default async function AutomationDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const automation = getAutomation(id);
-  if (!automation) notFound();
+  const automation = await getAutomation(id).catch(handleReadError);
 
   return (
     <div className="mx-auto flex max-w-[1400px] flex-col gap-4">
@@ -45,7 +41,7 @@ export default async function AutomationDetailPage({
       </Reveal>
 
       <Reveal delay={0.04}>
-        <AutomationBuilder automation={automation} />
+        <AutomationBuilder automation={automation} isNew={false} />
       </Reveal>
     </div>
   );

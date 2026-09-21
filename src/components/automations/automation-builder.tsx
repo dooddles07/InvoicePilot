@@ -1,11 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useMemo, useState, useTransition } from "react";
 import { Plus, Save, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { FlowCanvas } from "@/components/automations/flow-canvas";
 import { NODE_VISUAL } from "@/components/automations/node-visuals";
+import { createAutomation, updateAutomation } from "@/lib/actions/automations";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,6 +21,8 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import type { Automation, AutomationNode, AutomationNodeType } from "@/types";
+
+const TONES: Automation["tone"][] = ["friendly", "firm", "final"];
 
 const ADDABLE: AutomationNodeType[] = [
   "delay",
@@ -94,9 +98,21 @@ function findNode(nodes: AutomationNode[], id: string): AutomationNode | undefin
  * That split is what makes the whole thing keyboard-operable — nothing here
  * depends on dragging a node to a pixel.
  */
-export function AutomationBuilder({ automation }: { automation: Automation }) {
+export function AutomationBuilder({
+  automation,
+  isNew,
+}: {
+  automation: Automation;
+  /** trigger_days and tone are fixed at creation (see the schema comment on
+   *  automations.trigger_days) -- editable here only while creating. */
+  isNew: boolean;
+}) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
   const [name, setName] = useState(automation.name);
   const [enabled, setEnabled] = useState(automation.enabled);
+  const [triggerDays, setTriggerDays] = useState(automation.trigger_days);
+  const [tone, setTone] = useState(automation.tone);
   const [nodes, setNodes] = useState<AutomationNode[]>(automation.nodes);
   const [selectedId, setSelectedId] = useState<string | null>(
     automation.nodes[0]?.id ?? null,
@@ -142,6 +158,38 @@ export function AutomationBuilder({ automation }: { automation: Automation }) {
     setDirty(true);
   };
 
+  const handleSave = () => {
+    startTransition(async () => {
+      if (isNew) {
+        const result = await createAutomation({
+          name,
+          description: automation.description,
+          trigger_days: triggerDays,
+          tone,
+          nodes,
+        });
+        if (!result.ok) {
+          toast.error("Could not create the automation", { description: result.message });
+          return;
+        }
+        toast.success("Automation created");
+        router.push(`/automations/${result.automationId}`);
+        return;
+      }
+
+      const result = await updateAutomation(automation.id, { name, enabled, nodes });
+      if (!result.ok) {
+        toast.error("Could not save the automation", { description: result.message });
+        return;
+      }
+      setDirty(false);
+      toast.success("Automation saved", {
+        description: `${name} is ${enabled ? "active" : "paused"} with ${stepCount} steps.`,
+      });
+      router.refresh();
+    });
+  };
+
   return (
     <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_320px]">
       <div className="bg-card shadow-e1 rounded-xl border">
@@ -175,8 +223,54 @@ export function AutomationBuilder({ automation }: { automation: Automation }) {
                 setEnabled(v === true);
                 setDirty(true);
               }}
+              disabled={isNew}
             />
           </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-4 border-b p-3">
+          {isNew ? (
+            <>
+              <div className="flex items-center gap-2">
+                <Label htmlFor="trigger-days" className="text-caption">
+                  Trigger after
+                </Label>
+                <Input
+                  id="trigger-days"
+                  type="number"
+                  min={0}
+                  max={365}
+                  value={triggerDays}
+                  onChange={(e) => setTriggerDays(Number(e.target.value))}
+                  className="h-8 w-20"
+                />
+                <span className="text-muted-foreground text-caption">days overdue</span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Label htmlFor="trigger-tone" className="text-caption">
+                  Tone
+                </Label>
+                <Select value={tone} onValueChange={(v) => setTone(v as Automation["tone"])}>
+                  <SelectTrigger id="trigger-tone" size="sm" className="w-28">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TONES.map((t) => (
+                      <SelectItem key={t} value={t}>
+                        {t[0]!.toUpperCase() + t.slice(1)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </>
+          ) : (
+            <p className="text-muted-foreground text-caption">
+              Fires {triggerDays} day{triggerDays === 1 ? "" : "s"} overdue, {tone} tone —
+              set at creation, not editable here.
+            </p>
+          )}
         </div>
 
         <div className="bg-muted/20 p-4 sm:p-6">
@@ -213,16 +307,11 @@ export function AutomationBuilder({ automation }: { automation: Automation }) {
           </p>
           <Button
             size="sm"
-            disabled={!dirty}
-            onClick={() => {
-              setDirty(false);
-              toast.success("Automation saved", {
-                description: `${name} is ${enabled ? "active" : "paused"} with ${stepCount} steps.`,
-              });
-            }}
+            disabled={pending || !name.trim() || (!dirty && !isNew)}
+            onClick={handleSave}
           >
             <Save className="size-3.5" />
-            Save changes
+            {pending ? "Saving…" : isNew ? "Create automation" : "Save changes"}
           </Button>
         </div>
       </div>

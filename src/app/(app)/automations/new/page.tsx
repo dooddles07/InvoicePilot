@@ -16,6 +16,8 @@ const BLANK: Automation = {
   description: "",
   enabled: false,
   trigger_label: "Invoice becomes overdue",
+  trigger_days: 1,
+  tone: "friendly",
   nodes: [
     {
       id: "nd_new_trigger",
@@ -28,6 +30,7 @@ const BLANK: Automation = {
   recovered_cents_30d: 0,
   last_run_at: null,
   created_at: NOW.toISOString(),
+  updated_at: NOW.toISOString(),
 };
 
 export default async function NewAutomationPage({
@@ -71,7 +74,7 @@ export default async function NewAutomationPage({
       </Reveal>
 
       <Reveal delay={0.04}>
-        <AutomationBuilder key={templateId ?? "blank"} automation={automation} />
+        <AutomationBuilder key={templateId ?? "blank"} automation={automation} isNew />
       </Reveal>
     </div>
   );
