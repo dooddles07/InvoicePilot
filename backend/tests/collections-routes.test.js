@@ -132,3 +132,60 @@ describe("GET /api/collections/queue", () => {
     });
   });
 });
+
+describe("GET /api/collections/insights", () => {
+  it("ranks by priority and names this invoice's share of the overdue book", async () => {
+    await withApp(async ({ send, tx }) => {
+      const ws = await makeWorkspace(tx);
+      const customer = await makeCustomer(tx, ws, { name: "Insights Co" });
+      await makeInvoice(tx, ws, customer, { amount: 50_000, dueOffsetDays: -40 });
+
+      const response = await send("GET", "/api/collections/insights", {
+        token: await tokenFor(ws),
+      });
+
+      assert.equal(response.status, 200);
+      assert.equal(response.body.data.length, 1);
+      const insight = response.body.data[0];
+      assert.equal(insight.priority, 1);
+      assert.equal(insight.customer_name, "Insights Co");
+      assert.match(insight.reasoning, /% of your overdue balance/);
+      assert.ok(insight.confidence > 0 && insight.confidence <= 0.95);
+    });
+  });
+});
+
+describe("GET /api/collections/summary", () => {
+  it("returns the three ai-summary headline numbers", async () => {
+    await withApp(async ({ send, tx }) => {
+      const ws = await makeWorkspace(tx);
+      const customer = await makeCustomer(tx, ws, { name: "Summary Co" });
+      await makeInvoice(tx, ws, customer, { amount: 10_000, dueOffsetDays: -10 });
+
+      const response = await send("GET", "/api/collections/summary", {
+        token: await tokenFor(ws),
+      });
+
+      assert.equal(response.status, 200);
+      assert.equal(typeof response.body.recoverable_cents, "number");
+      assert.equal(typeof response.body.at_risk_count, "number");
+      assert.equal(typeof response.body.contact_count, "number");
+    });
+  });
+
+  it("does not count another workspace's ledger", async () => {
+    await withApp(async ({ send, tx }) => {
+      const mine = await makeWorkspace(tx);
+      const theirs = await makeWorkspace(tx);
+      const theirCustomer = await makeCustomer(tx, theirs, { name: "Other Co" });
+      await makeInvoice(tx, theirs, theirCustomer, { amount: 100_000, dueOffsetDays: -10 });
+
+      const response = await send("GET", "/api/collections/summary", {
+        token: await tokenFor(mine),
+      });
+
+      assert.equal(response.body.recoverable_cents, 0);
+      assert.equal(response.body.contact_count, 0);
+    });
+  });
+});
