@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import * as collections from "../models/collections.js";
 import { aiInsightFor, aiNoteFor } from "../services/collections.js";
-import { notImplemented } from "./not-implemented.js";
+import { sendInvoiceEmail } from "../services/invoices.js";
 import { parse } from "./query.js";
 
 const queueQuery = z.object({
@@ -13,7 +13,15 @@ const insightsQuery = z.object({
   limit: z.coerce.number().int().min(1).max(20).default(3),
 });
 
-export function collectionsController(sql) {
+const sendReminderBody = z.object({
+  invoice_id: z.uuid(),
+  tone: z.enum(["friendly", "firm", "final"]).default("friendly"),
+  idempotency_key: z.string().min(1).max(64),
+  subject: z.string().min(1).max(300).optional(),
+  body: z.string().min(1).max(20_000).optional(),
+});
+
+export function collectionsController(sql, config) {
   return {
     async pipeline(request, response) {
       response.json({
@@ -55,6 +63,22 @@ export function collectionsController(sql) {
       response.json(await collections.getInsightsSummary(sql, request.principal.workspaceId));
     },
 
-    reminders: notImplemented,
+    async reminders(request, response) {
+      const body = parse(sendReminderBody, request.body);
+      const { invoice } = await sendInvoiceEmail(
+        sql,
+        config,
+        request.principal.workspaceId,
+        request.principal,
+        body.invoice_id,
+        {
+          tone: body.tone,
+          idempotencyKey: body.idempotency_key,
+          subjectOverride: body.subject,
+          bodyOverride: body.body,
+        },
+      );
+      response.json(invoice);
+    },
   };
 }

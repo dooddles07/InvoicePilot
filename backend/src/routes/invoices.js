@@ -5,7 +5,7 @@ import { authenticate } from "../middleware/authenticate.js";
 import { requirePermission } from "../middleware/require.js";
 
 export function invoicesRouter(sql, config) {
-  const controller = invoicesController(sql);
+  const controller = invoicesController(sql, config);
   const router = Router();
   router.use(authenticate(config.secretKey));
 

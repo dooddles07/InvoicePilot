@@ -5,7 +5,7 @@ import { authenticate } from "../middleware/authenticate.js";
 import { requirePermission } from "../middleware/require.js";
 
 export function collectionsRouter(sql, config) {
-  const controller = collectionsController(sql);
+  const controller = collectionsController(sql, config);
   const router = Router();
   router.use(authenticate(config.secretKey));
 
