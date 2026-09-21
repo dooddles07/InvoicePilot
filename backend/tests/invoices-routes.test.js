@@ -13,6 +13,7 @@ import { after, describe, it } from "node:test";
 import { issueAccessToken, makePrincipal } from "../src/lib/security.js";
 import { sql } from "./helpers/database.js";
 import {
+  makeCollectionEvent,
   makeCustomer,
   makeInvoice,
   makeInvoiceItems,
@@ -221,6 +222,37 @@ describe("GET /api/invoices/:invoiceId", () => {
 });
 
 describe("GET /api/invoices/:invoiceId/events", () => {
+  it("returns this invoice's events, newest first, with no total field", async () => {
+    await withApp(async ({ send, tx }) => {
+      const ws = await makeWorkspace(tx);
+      const customer = await makeCustomer(tx, ws, { name: "Events Co" });
+      const invoiceId = await makeInvoice(tx, ws, customer, {
+        amount: 10_000,
+        dueOffsetDays: 10,
+      });
+      await makeCollectionEvent(tx, ws, customer, {
+        invoiceId,
+        type: "invoice_sent",
+        occurredOffsetDays: -10,
+      });
+      await makeCollectionEvent(tx, ws, customer, {
+        invoiceId,
+        type: "reminder_sent",
+        occurredOffsetDays: -2,
+      });
+
+      const response = await send("GET", `/api/invoices/${invoiceId}/events`, {
+        token: await tokenFor(ws),
+      });
+
+      assert.equal(response.status, 200);
+      assert.equal(response.body.data.length, 2);
+      assert.equal(response.body.data[0].type, "reminder_sent");
+      assert.equal(response.body.data[1].type, "invoice_sent");
+      assert.equal(response.body.total, undefined);
+    });
+  });
+
   it("answers 404 for another workspace's invoice before touching events", async () => {
     await withApp(async ({ send, tx }) => {
       const mine = await makeWorkspace(tx);

@@ -113,5 +113,9 @@ export const getInvoices = cache(async (query: InvoiceListQuery = {}) =>
 export const getInvoice = cache(async (invoiceId: string) =>
   apiFetch(`/invoices/${invoiceId}`, { schema: invoiceDetailSchema }));
 
+// Not listOf(): this sub-resource is the complete, unfiltered event history
+// for one invoice, with no limit/offset/sort -- total has no meaning here.
+const invoiceEventsSchema = z.object({ data: z.array(collectionEventSchema) });
+
 export const getInvoiceEvents = cache(async (invoiceId: string) =>
-  apiFetch(`/invoices/${invoiceId}/events`, { schema: listOf(collectionEventSchema) }));
+  apiFetch(`/invoices/${invoiceId}/events`, { schema: invoiceEventsSchema }));
