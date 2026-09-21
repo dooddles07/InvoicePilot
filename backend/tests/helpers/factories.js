@@ -7,6 +7,24 @@
  * the following morning.
  */
 
+/** A real users row, for the write-path tests: audit_logs.actor_user_id and
+ *  collection_events/communication_logs' actor lookups need an id that
+ *  actually resolves, unlike the random uuid tokenFor() mints for read-only
+ *  tests that never touch those tables. */
+export async function makeUser(tx, options = {}) {
+  const rows = await tx`
+    INSERT INTO users (id, email, full_name, password_hash)
+    VALUES (
+      gen_random_uuid(),
+      gen_random_uuid()::text || '@example.test',
+      ${options.fullName ?? "Test User"},
+      'unused'
+    )
+    RETURNING id
+  `;
+  return rows[0].id;
+}
+
 export async function makeWorkspace(tx) {
   const rows = await tx`
     INSERT INTO workspaces (id, name, slug)
