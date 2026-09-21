@@ -99,11 +99,33 @@ export interface Invoice {
   paid_date: ISODate | null;
   /** Positive when past due, 0 or negative otherwise. */
   days_overdue: number;
+  /** The API's own overdue signal. Absent from the fixtures, which encode
+   *  the same idea directly as the "overdue" member of InvoiceStatus instead;
+   *  InvoiceStatusBadge derives its display state from whichever is present. */
+  is_overdue?: boolean;
   last_contacted_at: ISODate | null;
   next_action: string | null;
   po_number: string | null;
   notes: string | null;
+}
+
+/** GET /invoices/:id only -- line items and the customer context the detail
+ *  page renders are not worth paying for on every row of a list. */
+export interface InvoiceDetail extends Invoice {
   items: InvoiceItem[];
+  customer: {
+    id: UUID;
+    name: string;
+    contact_name: string;
+    email: string;
+    phone: string | null;
+    payment_terms_days: number;
+    outstanding_cents: number;
+    on_time_rate: number;
+    avg_days_to_pay: number;
+    open_invoice_count: number;
+    risk: RiskLevel;
+  };
 }
 
 /* ---------- payments ---------- */
