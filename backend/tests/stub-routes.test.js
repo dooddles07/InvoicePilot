@@ -58,6 +58,8 @@ const ENDPOINTS = [
 
   ["GET", "/api/collections/pipeline", "invoice:read"],
   ["GET", "/api/collections/queue", "invoice:read"],
+  ["GET", "/api/collections/insights", "invoice:read"],
+  ["GET", "/api/collections/summary", "invoice:read"],
   ["POST", "/api/collections/reminders", "invoice:write"],
 
   ["GET", "/api/automations", "automation:read"],
@@ -71,6 +73,7 @@ const ENDPOINTS = [
   ["GET", "/api/notifications/preferences", null],
   ["PUT", "/api/notifications/preferences", null],
 
+  ["GET", "/api/reports/summary", "report:read"],
   ["GET", "/api/reports/aging", "report:read"],
   ["GET", "/api/reports/cash-flow", "report:read"],
   ["GET", "/api/reports/collection-rate", "report:read"],
@@ -126,6 +129,13 @@ const REAL = new Set([
   // collections-routes.test.js
   key("GET", "/api/collections/pipeline"),
   key("GET", "/api/collections/queue"),
+  key("GET", "/api/collections/insights"),
+  key("GET", "/api/collections/summary"),
+
+  // reports-routes.test.js
+  key("GET", "/api/reports/summary"),
+  key("GET", "/api/reports/aging"),
+  key("GET", "/api/reports/cash-flow"),
 ]);
 
 const NOT_IMPLEMENTED = new Set(
@@ -173,12 +183,12 @@ function send(method, path, token) {
 const stubs = ENDPOINTS.filter(([method, path]) => NOT_IMPLEMENTED.has(key(method, path)));
 
 describe("the endpoint inventory", () => {
-  it("is 56 endpoints -- the spec's 55 plus the customer events route it lacked", () => {
-    assert.equal(ENDPOINTS.length, 56);
+  it("is 59 endpoints -- the spec's 55 plus four the port added", () => {
+    assert.equal(ENDPOINTS.length, 59);
   });
 
   it("tracks exactly the endpoints still not implemented", () => {
-    assert.equal(NOT_IMPLEMENTED.size, 40);
+    assert.equal(NOT_IMPLEMENTED.size, 38);
   });
 });
 
