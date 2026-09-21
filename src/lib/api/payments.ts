@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import type { Payment, PaymentMethod } from "@/types";
 import { apiFetch } from "./client";
+import { invoiceSchema } from "./invoices";
 import { listOf, toQueryString } from "./list";
 
 const paymentMethodSchema = z.enum([
@@ -41,3 +42,17 @@ export type PaymentListQuery = {
 
 export const getPayments = cache(async (query: PaymentListQuery = {}) =>
   apiFetch(`/payments${toQueryString(query)}`, { schema: paymentListSchema }));
+
+// Not cache()-wrapped: a mutation, called only from src/lib/actions/invoices.ts.
+export type RecordPaymentInput = {
+  invoice_id: string;
+  amount_cents: number;
+  method: PaymentMethod;
+  reference?: string;
+  received_at: string;
+};
+
+const recordPaymentSchema = z.object({ payment: paymentSchema, invoice: invoiceSchema });
+
+export const postPayment = (body: RecordPaymentInput) =>
+  apiFetch("/payments", { method: "POST", body, schema: recordPaymentSchema });

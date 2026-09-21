@@ -121,3 +121,41 @@ const invoiceEventsSchema = z.object({ data: z.array(collectionEventSchema) });
 
 export const getInvoiceEvents = cache(async (invoiceId: string) =>
   apiFetch(`/invoices/${invoiceId}/events`, { schema: invoiceEventsSchema }));
+
+/* ---------- writes ----------
+ * Not cache()-wrapped: React's cache() dedupes identical calls within one
+ * render, which is wrong for anything with a side effect. Called from
+ * src/lib/actions/invoices.ts, never from a page directly.
+ */
+
+export type CreateInvoiceInput = {
+  customer_id: string;
+  issue_date: string;
+  due_date: string;
+  po_number?: string;
+  notes?: string;
+  items: { description: string; quantity: number; unit_price_cents: number }[];
+};
+
+export const postInvoice = (body: CreateInvoiceInput) =>
+  apiFetch("/invoices", { method: "POST", body, schema: invoiceDetailSchema });
+
+export type UpdateInvoiceInput = {
+  status?: "sent" | "disputed";
+  po_number?: string | null;
+  notes?: string | null;
+  due_date?: string;
+};
+
+export const patchInvoice = (invoiceId: string, body: UpdateInvoiceInput) =>
+  apiFetch(`/invoices/${invoiceId}`, { method: "PATCH", body, schema: invoiceSchema });
+
+export type SendInvoiceInput = {
+  tone?: "friendly" | "firm" | "final";
+  idempotency_key: string;
+  subject?: string;
+  body?: string;
+};
+
+export const sendInvoice = (invoiceId: string, body: SendInvoiceInput) =>
+  apiFetch(`/invoices/${invoiceId}/send`, { method: "POST", body, schema: invoiceSchema });
