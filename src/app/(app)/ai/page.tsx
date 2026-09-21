@@ -4,18 +4,20 @@ import { ShieldCheck } from "lucide-react";
 import { AskInvoicePilot } from "@/components/ai/ask-invoicepilot";
 import { PageHeader } from "@/components/invoicepilot/page-header";
 import { Reveal } from "@/components/motion/reveal";
-import { answerFor, SUGGESTED_QUESTIONS } from "@/lib/data";
-import type { AIAnswer } from "@/types";
 
 export const metadata: Metadata = { title: "Ask InvoicePilot" };
 
-export default function AskPage() {
-  // Answers are computed on the server from the same ledger every other screen
-  // reads, so what the assistant says can always be checked against a table.
-  const answers = Object.fromEntries(
-    SUGGESTED_QUESTIONS.map((q) => [q, answerFor(q)]),
-  ) as Record<string, AIAnswer>;
+// The four ready-made prompts. Not fixture data -- POST /ai/ask answers any
+// question, real-time, against the ledger; these just give an empty box
+// something to click.
+const SUGGESTED_QUESTIONS = [
+  "Why did our overdue balance increase?",
+  "Which customers are most likely to pay late?",
+  "How much did we collect this month?",
+  "Which invoices should I prioritise?",
+] as const;
 
+export default function AskPage() {
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-4">
       <Reveal>
@@ -26,7 +28,7 @@ export default function AskPage() {
       </Reveal>
 
       <Reveal delay={0.04}>
-        <AskInvoicePilot suggestions={SUGGESTED_QUESTIONS} answers={answers} />
+        <AskInvoicePilot suggestions={SUGGESTED_QUESTIONS} />
       </Reveal>
 
       <Reveal delay={0.08}>

@@ -24,6 +24,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Reveal } from "@/components/motion/reveal";
+import { askInvoicePilot } from "@/lib/actions/ai";
 import { money, percent } from "@/lib/format";
 import type { AIAnswer } from "@/types";
 import { cn } from "@/lib/utils";
@@ -44,29 +45,27 @@ const DIRECTION_ICON = {
  */
 export function AskInvoicePilot({
   suggestions,
-  answers,
 }: {
   suggestions: readonly string[];
-  /** Answers precomputed on the server, keyed by question. */
-  answers: Record<string, AIAnswer>;
 }) {
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState<AIAnswer | null>(null);
   const [thinking, setThinking] = useState(false);
   const [confirming, setConfirming] = useState(false);
 
-  const ask = (q: string) => {
+  const ask = async (q: string) => {
     const trimmed = q.trim();
     if (!trimmed) return;
     setQuestion(trimmed);
     setThinking(true);
     setAnswer(null);
-    // A short delay is honest here: the real thing queries the ledger, and a
-    // result that appears instantly reads as canned.
-    window.setTimeout(() => {
-      setAnswer(answers[matchKey(trimmed, Object.keys(answers))] ?? null);
-      setThinking(false);
-    }, 550);
+    const result = await askInvoicePilot(trimmed);
+    setThinking(false);
+    if (!result.ok) {
+      toast.error("Could not ask InvoicePilot", { description: result.message });
+      return;
+    }
+    setAnswer(result.answer);
   };
 
   return (
@@ -269,22 +268,4 @@ export function AskInvoicePilot({
       </Dialog>
     </div>
   );
-}
-
-/** Picks the closest precomputed answer by shared words. */
-function matchKey(question: string, keys: string[]): string {
-  const words = new Set(question.toLowerCase().split(/\W+/).filter(Boolean));
-  let best = keys[0]!;
-  let bestScore = -1;
-  for (const key of keys) {
-    const score = key
-      .toLowerCase()
-      .split(/\W+/)
-      .filter((w) => words.has(w)).length;
-    if (score > bestScore) {
-      best = key;
-      bestScore = score;
-    }
-  }
-  return best;
 }
