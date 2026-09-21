@@ -44,6 +44,7 @@ const ENDPOINTS = [
   ["GET", "/api/customers/c-1", "customer:read"],
   ["PATCH", "/api/customers/c-1", "customer:write"],
   ["GET", "/api/customers/c-1/behaviour", "customer:read"],
+  ["GET", "/api/customers/c-1/events", "customer:read"],
 
   ["GET", "/api/invoices", "invoice:read"],
   ["POST", "/api/invoices", "invoice:write"],
@@ -112,6 +113,15 @@ const REAL = new Set([
   key("GET", "/api/invoices"),
   key("GET", "/api/invoices/i-1"),
   key("GET", "/api/invoices/i-1/events"),
+
+  // customers-routes.test.js
+  key("GET", "/api/customers"),
+  key("GET", "/api/customers/c-1"),
+  key("GET", "/api/customers/c-1/behaviour"),
+  key("GET", "/api/customers/c-1/events"),
+
+  // payments-routes.test.js
+  key("GET", "/api/payments"),
 ]);
 
 const NOT_IMPLEMENTED = new Set(
@@ -159,12 +169,12 @@ function send(method, path, token) {
 const stubs = ENDPOINTS.filter(([method, path]) => NOT_IMPLEMENTED.has(key(method, path)));
 
 describe("the endpoint inventory", () => {
-  it("is 55 endpoints, matching the spec's count for the service it replaced", () => {
-    assert.equal(ENDPOINTS.length, 55);
+  it("is 56 endpoints -- the spec's 55 plus the customer events route it lacked", () => {
+    assert.equal(ENDPOINTS.length, 56);
   });
 
   it("tracks exactly the endpoints still not implemented", () => {
-    assert.equal(NOT_IMPLEMENTED.size, 46);
+    assert.equal(NOT_IMPLEMENTED.size, 42);
   });
 });
 
