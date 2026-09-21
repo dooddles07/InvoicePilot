@@ -7,8 +7,9 @@
 import { z } from "zod";
 
 import { transaction } from "../db/index.js";
-import { NotImplemented, ValidationFailed } from "../middleware/errors.js";
+import { NotImplemented } from "../middleware/errors.js";
 import * as auth from "../services/auth.js";
+import { parse } from "./query.js";
 
 // Field for field with app/schemas/auth.py, snake_case included, so the Zod
 // schema in src/lib/api/ stays a transcription rather than a translation.
@@ -28,17 +29,6 @@ const loginSchema = z.object({
 const refreshSchema = z.object({ refresh_token: z.string().min(1) });
 
 const switchWorkspaceSchema = z.object({ workspace_id: z.uuid() });
-
-/**
- * One fixed detail rather than Pydantic's error list. src/lib/api/client.ts
- * reads a string `detail` and falls back to the status text, so the list was
- * never reaching a screen.
- */
-function parse(schema, body) {
-  const result = schema.safeParse(body);
-  if (!result.success) throw new ValidationFailed();
-  return result.data;
-}
 
 export function authController(sql, config) {
   return {
