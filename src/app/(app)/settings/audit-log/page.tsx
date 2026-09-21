@@ -3,12 +3,15 @@ import { Download } from "lucide-react";
 
 import { SettingsCard } from "@/components/settings/settings-card";
 import { Button } from "@/components/ui/button";
-import { auditLogs } from "@/lib/data";
+import { getAuditLog } from "@/lib/api/audit";
+import { handleReadError } from "@/lib/api/client";
 import { formatDate } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Audit log" };
 
-export default function AuditLogPage() {
+export default async function AuditLogPage() {
+  const { data: auditLogs } = await getAuditLog({ limit: 100 }).catch(handleReadError);
+
   return (
     <SettingsCard
       title="Audit log"
@@ -53,7 +56,7 @@ export default function AuditLogPage() {
                   {entry.target}
                 </td>
                 <td className="text-muted-foreground hidden py-2.5 pr-3 font-mono text-caption sm:table-cell">
-                  {entry.ip}
+                  {entry.ip ?? "—"}
                 </td>
                 <td className="text-muted-foreground tnum py-2.5 text-right text-caption whitespace-nowrap">
                   {formatDate(entry.occurred_at)}

@@ -4,12 +4,17 @@ import { Pencil, Plus } from "lucide-react";
 import { SettingsCard } from "@/components/settings/settings-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { emailTemplates } from "@/lib/data";
+import { handleReadError } from "@/lib/api/client";
+import { getEmailTemplates } from "@/lib/api/notifications";
 import { formatDate } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Email templates" };
 
-export default function EmailTemplatesPage() {
+const TONE_LABEL = { friendly: "Friendly", firm: "Firm", final: "Final" } as const;
+
+export default async function EmailTemplatesPage() {
+  const { data: emailTemplates } = await getEmailTemplates().catch(handleReadError);
+
   return (
     <SettingsCard
       title="Email templates"
@@ -26,11 +31,7 @@ export default function EmailTemplatesPage() {
           <li key={template.id} className="space-y-2 py-3 first:pt-0 last:pb-0">
             <div className="flex flex-wrap items-center gap-2">
               <h3 className="text-small font-medium">{template.name}</h3>
-              {template.used_by.map((automation) => (
-                <Badge key={automation} variant="outline">
-                  {automation}
-                </Badge>
-              ))}
+              <Badge variant="outline">{TONE_LABEL[template.tone]}</Badge>
               <Button
                 variant="ghost"
                 size="xs"

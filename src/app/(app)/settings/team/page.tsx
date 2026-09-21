@@ -4,7 +4,9 @@ import { UserPlus } from "lucide-react";
 import { SettingsCard } from "@/components/settings/settings-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { teamMembers } from "@/lib/data";
+import { handleReadError } from "@/lib/api/client";
+import { requireSession } from "@/lib/api/session";
+import { getMembers } from "@/lib/api/workspaces";
 import { formatDate, initials } from "@/lib/format";
 import type { WorkspaceRole } from "@/types";
 
@@ -49,12 +51,15 @@ const ROLE_TONE: Record<WorkspaceRole, string> = {
   viewer: "bg-muted text-muted-foreground",
 };
 
-export default function TeamSettingsPage() {
+export default async function TeamSettingsPage() {
+  const session = await requireSession();
+  const { data: teamMembers } = await getMembers(session.workspace_id).catch(handleReadError);
+
   return (
     <div className="space-y-3">
       <SettingsCard
         title="Team members"
-        description={`${teamMembers.length} people have access to this workspace.`}
+        description={`${teamMembers.length} ${teamMembers.length === 1 ? "person has" : "people have"} access to this workspace.`}
         footer={
           <Button size="sm">
             <UserPlus className="size-3.5" />
