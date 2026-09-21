@@ -114,7 +114,10 @@ const REAL = new Set([
 
   // invoices-routes.test.js
   key("GET", "/api/invoices"),
+  key("POST", "/api/invoices"),
   key("GET", "/api/invoices/i-1"),
+  key("PATCH", "/api/invoices/i-1"),
+  key("POST", "/api/invoices/i-1/send"),
   key("GET", "/api/invoices/i-1/events"),
 
   // customers-routes.test.js
@@ -125,12 +128,14 @@ const REAL = new Set([
 
   // payments-routes.test.js
   key("GET", "/api/payments"),
+  key("POST", "/api/payments"),
 
   // collections-routes.test.js
   key("GET", "/api/collections/pipeline"),
   key("GET", "/api/collections/queue"),
   key("GET", "/api/collections/insights"),
   key("GET", "/api/collections/summary"),
+  key("POST", "/api/collections/reminders"),
 
   // reports-routes.test.js
   key("GET", "/api/reports/summary"),
@@ -188,7 +193,7 @@ describe("the endpoint inventory", () => {
   });
 
   it("tracks exactly the endpoints still not implemented", () => {
-    assert.equal(NOT_IMPLEMENTED.size, 38);
+    assert.equal(NOT_IMPLEMENTED.size, 33);
   });
 });
 
