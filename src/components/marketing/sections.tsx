@@ -1,4 +1,3 @@
-import Link from "next/link";
 import {
   AlarmClock,
   ArrowRight,
@@ -475,64 +474,6 @@ export function CashFlowSection() {
         </div>
       }
     />
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* Integrations                                                        */
-/* ------------------------------------------------------------------ */
-
-const INTEGRATION_GROUPS = [
-  { label: "Accounting", items: ["QuickBooks", "Xero"] },
-  { label: "Payments", items: ["Stripe", "PayPal"] },
-  { label: "Communication", items: ["Gmail", "Outlook", "Twilio"] },
-  { label: "Ecommerce", items: ["Shopify", "WooCommerce"] },
-  { label: "Automation", items: ["Zapier", "Webhooks"] },
-];
-
-export function Integrations() {
-  return (
-    <section id="integrations" className="border-b scroll-mt-16">
-      <div className="mx-auto max-w-6xl px-4 py-14">
-        <Reveal className="max-w-2xl">
-          <h2 className="text-h1 font-semibold tracking-tight text-balance">
-            It plugs into the stack you already run
-          </h2>
-          <p className="text-muted-foreground mt-3 text-body">
-            Two-way sync with your ledger, reminders from your own address, and
-            payments reconciled without a manual match.
-          </p>
-        </Reveal>
-
-        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          {INTEGRATION_GROUPS.map((group, i) => (
-            <Reveal key={group.label} delay={0.03 * i}>
-              <div className="bg-card shadow-e1 h-full rounded-xl border p-4">
-                <h3 className="text-muted-foreground text-caption font-medium tracking-wider uppercase">
-                  {group.label}
-                </h3>
-                <ul className="mt-2 space-y-1.5">
-                  {group.items.map((item) => (
-                    <li key={item} className="text-small font-medium">
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </Reveal>
-          ))}
-        </div>
-
-        <Reveal delay={0.1}>
-          <p className="text-muted-foreground mt-4 text-caption">
-            Anything else connects through the REST API or signed webhooks.{" "}
-            <Link href="/integrations" className="text-brand hover:underline">
-              See all integrations
-            </Link>
-          </p>
-        </Reveal>
-      </div>
-    </section>
   );
 }
 

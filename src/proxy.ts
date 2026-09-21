@@ -28,7 +28,6 @@ const SIGNED_IN_ROOTS = [
   "/payments",
   "/reports",
   "/automations",
-  "/integrations",
   "/settings",
   "/ai",
   "/onboarding",

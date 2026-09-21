@@ -278,26 +278,6 @@ export interface AIAnswer {
   requires_confirmation: true;
 }
 
-/* ---------- integrations ---------- */
-
-export type IntegrationCategory =
-  | "accounting"
-  | "payments"
-  | "communication"
-  | "ecommerce"
-  | "automation";
-
-export interface Integration {
-  id: string;
-  workspace_id: UUID;
-  name: string;
-  category: IntegrationCategory;
-  description: string;
-  status: "connected" | "available" | "error";
-  connected_at: ISODate | null;
-  last_synced_at: ISODate | null;
-}
-
 /* ---------- reporting aggregates ---------- */
 
 export interface KpiSummary {

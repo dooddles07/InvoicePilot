@@ -12,7 +12,6 @@ import { Button } from "@/components/ui/button";
 const NAV = [
   { href: "/#product", label: "Product" },
   { href: "/#automation", label: "Automation" },
-  { href: "/#integrations", label: "Integrations" },
   { href: "/pricing", label: "Pricing" },
   { href: "/faq", label: "FAQ" },
 ];
@@ -109,7 +108,6 @@ const FOOTER_GROUPS = [
       { href: "/#product", label: "Overview" },
       { href: "/#automation", label: "Automation" },
       { href: "/#ai", label: "AI assistant" },
-      { href: "/#integrations", label: "Integrations" },
       { href: "/pricing", label: "Pricing" },
     ],
   },

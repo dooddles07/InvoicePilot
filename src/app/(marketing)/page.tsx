@@ -8,7 +8,6 @@ import {
   CashFlowSection,
   FinalCta,
   Hero,
-  Integrations,
   Problem,
   ProductOverview,
   SocialProof,
@@ -55,7 +54,6 @@ export default function LandingPage() {
       <AiSection />
       <AutomationSection />
       <CashFlowSection />
-      <Integrations />
       <Testimonials />
 
       <section id="pricing" className="border-b scroll-mt-16">

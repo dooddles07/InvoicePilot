@@ -7,7 +7,6 @@ import {
   LifeBuoy,
   PhoneCall,
   PieChart,
-  Plug,
   Settings,
   Workflow,
 } from "lucide-react";
@@ -34,7 +33,6 @@ export const PRIMARY_NAV: NavItem[] = [
 ];
 
 export const SECONDARY_NAV: NavItem[] = [
-  { title: "Integrations", href: "/integrations", icon: Plug },
   { title: "Settings", href: "/settings", icon: Settings },
 ];
 

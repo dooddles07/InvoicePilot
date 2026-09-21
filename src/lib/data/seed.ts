@@ -3,7 +3,6 @@ import type {
   CollectionEvent,
   CollectionEventType,
   Customer,
-  Integration,
   Invoice,
   InvoiceItem,
   Payment,
@@ -686,36 +685,3 @@ export const automations: Automation[] = [
   },
 ];
 
-/* ------------------------------------------------------------------ */
-/* Integrations                                                        */
-/* ------------------------------------------------------------------ */
-
-const integrationSeed: Array<
-  [string, string, Integration["category"], string, Integration["status"]]
-> = [
-  ["quickbooks", "QuickBooks", "accounting", "Sync customers, invoices and payments both ways.", "connected"],
-  ["xero", "Xero", "accounting", "Import your Xero ledger and keep balances in step.", "available"],
-  ["stripe", "Stripe", "payments", "Reconcile card and ACH payments automatically.", "connected"],
-  ["paypal", "PayPal", "payments", "Match PayPal settlements against open invoices.", "available"],
-  ["gmail", "Gmail", "communication", "Send reminders from your own address and thread replies.", "connected"],
-  ["outlook", "Outlook", "communication", "Send and track reminders through Microsoft 365.", "available"],
-  ["twilio", "Twilio", "communication", "Add SMS to escalation sequences.", "error"],
-  ["shopify", "Shopify", "ecommerce", "Pull wholesale orders in as invoices.", "available"],
-  ["woocommerce", "WooCommerce", "ecommerce", "Sync store orders and B2B accounts.", "available"],
-  ["zapier", "Zapier", "automation", "Connect InvoicePilot to 6,000+ apps.", "available"],
-  ["webhooks", "Webhooks", "automation", "Post collection events to your own endpoint.", "connected"],
-];
-
-export const integrations: Integration[] = integrationSeed.map(
-  ([iid, name, category, description, status]) => ({
-    id: iid,
-    workspace_id: workspace.id,
-    name,
-    category,
-    description,
-    status,
-    connected_at: status === "available" ? null : iso(addDays(NOW, -intBetween(30, 400))),
-    last_synced_at:
-      status === "connected" ? iso(addDays(NOW, -intBetween(0, 1))) : null,
-  }),
-);
