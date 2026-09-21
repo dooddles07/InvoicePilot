@@ -9,18 +9,10 @@ import { NeedsAttention } from "@/components/dashboard/needs-attention";
 import { PageHeader } from "@/components/invoicepilot/page-header";
 import { Reveal } from "@/components/motion/reveal";
 import { Button } from "@/components/ui/button";
-import {
-  currentUser,
-  getAging,
-  getAISummary,
-  getAIInsights,
-  getCashFlow,
-  getKpis,
-  getNeedsAttention,
-  NOW,
-} from "@/lib/data";
-import { verifyDataset } from "@/lib/data/verify";
-import type { CashFlowRange } from "@/lib/data";
+import { handleReadError } from "@/lib/api/client";
+import { getCollectionQueue, getInsights, getInsightsSummary } from "@/lib/api/collections";
+import { getAging, getCashFlow, getSummary, type CashFlowRange } from "@/lib/api/reports";
+import { requireSession } from "@/lib/api/session";
 import type { CashFlowPoint } from "@/types";
 
 export const metadata: Metadata = { title: "Overview" };
@@ -32,33 +24,34 @@ function greeting(at: Date) {
   return "Good evening";
 }
 
-export default function DashboardPage() {
-  // Fails loudly in development if the derived figures stop reconciling,
-  // rather than rendering plausible-looking but wrong money.
-  if (process.env.NODE_ENV !== "production") verifyDataset();
+export default async function DashboardPage() {
+  const session = await requireSession();
 
-  const kpis = getKpis();
-  const aging = getAging();
-  const attention = getNeedsAttention(5);
-  const insights = getAIInsights(3);
-  const aiSummary = getAISummary();
+  // All four cash-flow ranges are fetched once, up front: switching a range
+  // on the client is then instant and ships no extra request, same intent
+  // as the fixture ledger's "precompute all four" comment.
+  const ranges: CashFlowRange[] = ["7d", "30d", "90d", "12m"];
+  const [kpis, aging, attention, insights, aiSummary, ...cashFlowSeries] = await Promise.all([
+    getSummary(),
+    getAging(),
+    getCollectionQueue(5),
+    getInsights(3),
+    getInsightsSummary(),
+    ...ranges.map((r) => getCashFlow(r)),
+  ]).catch(handleReadError);
 
-  // All four ranges are precomputed on the server; switching a range on the
-  // client is then instant and ships no extra request.
   const series = Object.fromEntries(
-    (["7d", "30d", "90d", "12m"] as CashFlowRange[]).map((r) => [
-      r,
-      getCashFlow(r),
-    ]),
+    ranges.map((r, i) => [r, cashFlowSeries[i]]),
   ) as Record<CashFlowRange, CashFlowPoint[]>;
 
-  const firstName = currentUser.full_name.split(" ")[0];
+  const now = new Date();
+  const firstName = session.full_name.split(" ")[0];
 
   return (
     <div className="mx-auto flex max-w-[1400px] flex-col gap-4">
       <Reveal>
         <PageHeader
-          title={`${greeting(NOW)}, ${firstName}`}
+          title={`${greeting(now)}, ${firstName}`}
           description="Here's what needs your attention today."
           actions={
             <>
@@ -82,16 +75,16 @@ export default function DashboardPage() {
           <CashFlowChart series={series} />
         </Reveal>
         <Reveal delay={0.05}>
-          <AgingPanel buckets={aging} />
+          <AgingPanel buckets={aging.buckets} />
         </Reveal>
       </div>
 
       <div className="grid grid-cols-1 gap-3 xl:grid-cols-3">
         <Reveal className="xl:col-span-2">
-          <NeedsAttention items={attention} />
+          <NeedsAttention items={attention.data} />
         </Reveal>
         <div className="xl:col-span-1">
-          <AIInsights insights={insights} summary={aiSummary} />
+          <AIInsights insights={insights.data} summary={aiSummary} />
         </div>
       </div>
     </div>
