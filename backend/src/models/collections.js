@@ -5,6 +5,8 @@
  * argument and builds its statement through the shared scoping helper, so no
  * query reaches a tenant table unscoped.
  */
+import { randomUUID } from "node:crypto";
+
 import { inWorkspace } from "./scope.js";
 
 /**
@@ -148,4 +150,21 @@ export async function listCustomerEvents(sql, workspaceId, customerId) {
     ORDER BY occurred_at DESC
     LIMIT 20
   `;
+}
+
+/** Every write path that touches an invoice or a customer logs one of these
+ *  -- a payment, a send, a dispute. invoice_id and customer_id come from the
+ *  row the caller already loaded and scoped, never from request input. */
+export async function insertCollectionEvent(sql, workspaceId, { invoiceId, customerId, type, channel, summary, detail, actor, occurredAt }) {
+  const [row] = await sql`
+    INSERT INTO collection_events (
+      id, workspace_id, invoice_id, customer_id, type, channel,
+      summary, detail, actor, occurred_at
+    ) VALUES (
+      ${randomUUID()}, ${workspaceId}, ${invoiceId}, ${customerId}, ${type}, ${channel},
+      ${summary}, ${detail}, ${actor}, ${occurredAt}
+    )
+    RETURNING *
+  `;
+  return row;
 }
