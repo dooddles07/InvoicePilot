@@ -297,7 +297,7 @@ DEMO_EMAIL=""
 DEMO_PASSWORD=""
 ```
 
-- [ ] **Step 9: Verify locally**
+- [x] **Step 9: Verify locally**
 
 Set `DEMO_EMAIL` and `DEMO_PASSWORD` in `.env.local`, start the backend (`npm start` in `backend/`), then run `npm run dev` and visit `http://localhost:3000/demo`.
 
@@ -439,7 +439,7 @@ In `src/app/(auth)/login/page.tsx`, add a third paragraph inside the existing `t
         </p>
 ```
 
-- [ ] **Step 8: Verify**
+- [x] **Step 8: Verify**
 
 Run `npm run dev`, load `/`, and confirm in the browser network panel that `/api/warm` is requested once and answers 204. Click "View live demo" in the hero, the header and the footer; each lands on `/demo`.
 
@@ -763,7 +763,7 @@ and
 
 Apply the same `const count = selected.length;` capture to the reminders handler above, for the same reason.
 
-- [ ] **Step 6: Verify by hand**
+- [x] **Step 6: Verify by hand**
 
 Run `npm run dev` and open `/invoices` (via `/demo` if you are signed out).
 
@@ -1010,7 +1010,7 @@ In `src/app/(app)/invoices/[id]/page.tsx`:
 
 Leave the communications card, which filters `events` by type for its own purpose, reading the server list. It is history, not the thing the action changed.
 
-- [ ] **Step 7: Verify by hand**
+- [x] **Step 7: Verify by hand**
 
 Run `npm run dev`, open any overdue invoice from `/invoices`.
 
@@ -1168,7 +1168,7 @@ export default function robots(): MetadataRoute.Robots {
 This is a faithful port of every rule the static file declared, plus `/demo`
 and `/api/` on the wildcard group. Nothing else changes.
 
-- [ ] **Step 4: Verify**
+- [x] **Step 4: Verify**
 
 Run: `npm run build && npm run dev`, then load `http://localhost:3000/robots.txt` and `http://localhost:3000/sitemap.xml`.
 Expected: robots lists the sitemap at `http://localhost:3000/sitemap.xml`, and every sitemap URL uses the same origin. No occurrence of `invoicepilot.com` in either.
@@ -1306,7 +1306,7 @@ In `src/app/layout.tsx`, add to the `metadata` object after `description`:
 
 No second image file is needed: Next uses the same `opengraph-image` for `twitter:image`.
 
-- [ ] **Step 3: Verify**
+- [x] **Step 3: Verify**
 
 Run `npm run dev` and open `http://localhost:3000/opengraph-image`.
 Expected: a 1200×630 PNG with the product name, the tagline and three KPI tiles, no clipped text and no missing-font boxes.
@@ -1401,7 +1401,7 @@ export default function AppleIcon() {
 git rm src/app/favicon.ico public/next.svg public/vercel.svg public/window.svg public/file.svg public/globe.svg
 ```
 
-- [ ] **Step 5: Verify**
+- [x] **Step 5: Verify**
 
 Run: `npm run build && npm run dev`, then hard-reload `http://localhost:3000` and check the browser tab. Also open `http://localhost:3000/apple-icon`.
 Expected: the InvoicePilot mark in the tab, not the Next.js logo; a 180×180 PNG at `/apple-icon`. `/next.svg` now 404s, and no page is broken by it.
@@ -1483,7 +1483,7 @@ git push origin main
 
 Wait for the deployment to finish, and confirm both CI jobs pass on GitHub.
 
-- [ ] **Step 3: Time a cold demo entry**
+- [x] **Step 3: Time a cold demo entry**
 
 Leave the Render service idle for more than fifteen minutes. Then, in a private browser window, open the production `/demo` URL directly (bypassing the landing page, so nothing has warmed the API) and time it.
 
