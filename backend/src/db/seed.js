@@ -26,7 +26,7 @@
  *   Both sum to the total; the even split removes a source of drift and
  *   nothing downstream reads an individual item amount.
  */
-import { randomUUID } from "node:crypto";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { parseArgs } from "node:util";
 import { fileURLToPath } from "node:url";
 
@@ -407,7 +407,11 @@ export async function seedDemoWorkspace(
     const daysOverdue = draft.status === "paid" ? 0 : dayDiff(now, draft.due);
     if (daysOverdue > 1) {
       push("automation_ran", addDays(draft.due, 1), "system", "Friendly Payment Reminder", "Triggered 1 day after due date.");
-      push("reminder_sent", addDays(draft.due, 1), "email", "InvoicePilot", `Reminder sent to ${customerName} accounts payable.`);
+      // Same actor as the automation_ran event above: models/automations.js's
+      // recovered_cents_30d attributes a payment by matching this actor
+      // against automations.name, so the two must agree for the seeded
+      // ledger to show the same numbers the real evaluator would produce.
+      push("reminder_sent", addDays(draft.due, 1), "email", "Friendly Payment Reminder", `Reminder sent to ${customerName} accounts payable.`);
     }
     if (daysOverdue > 9) {
       push("reminder_sent", addDays(draft.due, 8), "email", "Priya Raman", "Second reminder, firmer tone.");
@@ -425,6 +429,32 @@ export async function seedDemoWorkspace(
       push("payment_received", draft.paid, "system", "InvoicePilot");
     }
   });
+
+  // A handful of already-paid invoices also get the automation's reminder
+  // event, dated the day before payment landed. The main loop above only
+  // reminds invoices that are *currently* still overdue (daysOverdue is
+  // forced to 0 once paid), so without this no seeded payment would ever
+  // land inside automations.recovered_cents_30d's window -- the real
+  // evaluator has no such gap, since a payment can arrive any time after a
+  // live reminder goes out.
+  payments
+    .filter((p) => dayDiff(now, p.received_at) < 25)
+    .slice(0, 3)
+    .forEach((p) => {
+      events.push({
+        id: randomUUID(),
+        workspace_id: workspaceId,
+        invoice_id: p.invoice_id,
+        customer_id: p.customer_id,
+        type: "reminder_sent",
+        channel: "email",
+        summary: EVENT_SUMMARY.reminder_sent,
+        detail: "Reminder sent to accounts payable.",
+        actor: "Friendly Payment Reminder",
+        occurred_at: addDays(p.received_at, -1),
+      });
+    });
+
   await insertRows(sql, "collection_events", events);
 
   // The audit log is a sample of the same events, not a parallel history:
@@ -466,6 +496,135 @@ export async function seedDemoWorkspace(
     });
   await insertRows(sql, "audit_logs", auditLogs);
 
+  const automationIds = [randomUUID(), randomUUID(), randomUUID()];
+  const automations = [
+    {
+      id: automationIds[0],
+      workspace_id: workspaceId,
+      name: "Friendly Payment Reminder",
+      description: "Nudges the customer the day after an invoice falls overdue.",
+      enabled: true,
+      trigger_label: "1 day overdue",
+      trigger_days: 1,
+      tone: "friendly",
+      nodes: [
+        { id: randomUUID(), type: "trigger", title: "Invoice becomes overdue", detail: "1 day overdue" },
+        { id: randomUUID(), type: "delay", title: "Wait 1 day", detail: "Business days only" },
+        { id: randomUUID(), type: "email", title: "Send friendly email", detail: "Template: Gentle nudge" },
+      ],
+      created_at: addDays(now, -286),
+      last_run_at: addDays(now, 0),
+    },
+    {
+      id: automationIds[1],
+      workspace_id: workspaceId,
+      name: "Firm Second Notice",
+      description: "Escalates to a firmer tone once a week has passed with no payment.",
+      enabled: true,
+      trigger_label: "8 days overdue",
+      trigger_days: 8,
+      tone: "firm",
+      nodes: [
+        { id: randomUUID(), type: "trigger", title: "Invoice becomes overdue", detail: "8 days overdue" },
+        { id: randomUUID(), type: "email", title: "Send second reminder", detail: "Template: Firmer follow-up" },
+      ],
+      created_at: addDays(now, -240),
+      last_run_at: addDays(now, -1),
+    },
+    {
+      id: automationIds[2],
+      workspace_id: workspaceId,
+      name: "Final Notice — 30 Days",
+      description: "Sends a final notice and alerts the account owner once an invoice is a month overdue.",
+      enabled: false,
+      trigger_label: "30 days overdue",
+      trigger_days: 30,
+      tone: "final",
+      nodes: [
+        { id: randomUUID(), type: "trigger", title: "Invoice 30 days overdue", detail: "Balance above $1,000" },
+        { id: randomUUID(), type: "email", title: "Send escalation notice", detail: "Template: Formal escalation" },
+        { id: randomUUID(), type: "notification", title: "Alert account owner", detail: "In-app, high priority" },
+      ],
+      created_at: addDays(now, -64),
+      last_run_at: null,
+    },
+  ];
+  await insertRows(sql, "automations", automations);
+
+  // Runs the "Runs (30d)" stat reads. recovered_cents_30d is not stored here
+  // -- it is computed live from payments joined through collection_events, so
+  // it already reflects the reminder_sent actor fix above with no seeding.
+  const runRow = (automationId, daysAgo, maxMatched) => {
+    const matched = rng.intBetween(1, maxMatched);
+    return {
+      id: randomUUID(),
+      workspace_id: workspaceId,
+      automation_id: automationId,
+      matched_count: matched,
+      sent_count: rng.intBetween(0, matched),
+      started_at: addDays(now, -daysAgo),
+      finished_at: addDays(now, -daysAgo),
+    };
+  };
+  const automationRuns = [5, 12, 19, 26]
+    .map((daysAgo) => runRow(automationIds[0], daysAgo, 9))
+    .concat([2, 15].map((daysAgo) => runRow(automationIds[1], daysAgo, 4)));
+  await insertRows(sql, "automation_runs", automationRuns);
+
+  // Two demo webhook endpoints -- one healthy, one showing the failing state
+  // the screen explains. Secrets are generated the same way createEndpoint
+  // does, but never surfaced anywhere a visitor could read them back.
+  const webhookEndpoints = [
+    {
+      id: randomUUID(),
+      workspace_id: workspaceId,
+      url: "https://hooks.example-crm.dev/invoicepilot",
+      secret: randomBytes(24).toString("base64url"),
+      events: ["payment.received", "invoice.sent", "reminder.sent"],
+      status: "active",
+      failure_count: 0,
+      last_delivery_at: addDays(now, -1),
+    },
+    {
+      id: randomUUID(),
+      workspace_id: workspaceId,
+      url: "https://ops.acme-erp.test/webhooks/ip",
+      secret: randomBytes(24).toString("base64url"),
+      events: ["payment.received"],
+      status: "failing",
+      failure_count: 3,
+      last_delivery_at: addDays(now, -6),
+    },
+  ];
+  await insertRows(sql, "webhook_endpoints", webhookEndpoints);
+
+  // Two demo API keys. The plaintext is shown once, at creation, and this is
+  // not that moment -- these hashes authenticate nothing real, the same as a
+  // password hash seeded for a user nobody is meant to log in as.
+  const apiKeys = [
+    {
+      id: randomUUID(),
+      workspace_id: workspaceId,
+      name: "CI Deploy Bot",
+      key_hash: createHash("sha256").update(`seed-${workspaceId}-ci-deploy-bot`, "utf8").digest("hex"),
+      last_four: "c1dB",
+      scopes: ["read", "write"],
+      created_at: addDays(now, -120),
+      last_used_at: addDays(now, -2),
+    },
+    {
+      id: randomUUID(),
+      workspace_id: workspaceId,
+      name: "Reporting Dashboard",
+      key_hash: createHash("sha256").update(`seed-${workspaceId}-reporting-dashboard`, "utf8").digest("hex"),
+      last_four: "r3pt",
+      scopes: ["read"],
+      created_at: addDays(now, -45),
+      last_used_at: null,
+    },
+  ];
+  await insertRows(sql, "api_keys", apiKeys);
+
   return {
     customers: customers.length,
     invoices: invoices.length,
@@ -473,6 +632,9 @@ export async function seedDemoWorkspace(
     payments: payments.length,
     events: events.length,
     audit_logs: auditLogs.length,
+    automations: automations.length,
+    webhook_endpoints: webhookEndpoints.length,
+    api_keys: apiKeys.length,
   };
 }
 
