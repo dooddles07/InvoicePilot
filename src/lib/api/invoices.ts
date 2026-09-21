@@ -75,7 +75,7 @@ const invoiceListSchema = listOf(invoiceSchema);
 const collectionEventSchema = z.object({
   id: z.uuid(),
   workspace_id: z.uuid(),
-  invoice_id: z.uuid(),
+  invoice_id: z.uuid().nullable(),
   customer_id: z.uuid(),
   type: z.enum([
     "invoice_sent",

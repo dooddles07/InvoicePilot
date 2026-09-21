@@ -50,8 +50,8 @@ export interface Customer {
   contact_name: string;
   email: string;
   phone: string | null;
-  industry: string;
-  customer_since: ISODate;
+  industry: string | null;
+  customer_since: ISODate | null;
   payment_terms_days: number;
   /** Derived server-side; the UI never recomputes these from the invoice list. */
   outstanding_cents: number;
@@ -147,7 +147,7 @@ export interface Payment {
   customer_name: string;
   amount_cents: number;
   method: PaymentMethod;
-  reference: string;
+  reference: string | null;
   received_at: ISODate;
 }
 
@@ -174,7 +174,9 @@ export type CollectionEventType =
 export interface CollectionEvent {
   id: UUID;
   workspace_id: UUID;
-  invoice_id: UUID;
+  /** Nullable in the schema: an event need not be tied to one invoice. Every
+   *  seeded event happens to have one, but the column carries no NOT NULL. */
+  invoice_id: UUID | null;
   customer_id: UUID;
   type: CollectionEventType;
   channel: "email" | "sms" | "phone" | "system" | null;
