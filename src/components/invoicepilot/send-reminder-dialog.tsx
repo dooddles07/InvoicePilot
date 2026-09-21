@@ -1,7 +1,7 @@
 "use client";
 
 import { Mail, Sparkles } from "lucide-react";
-import { useState, type ReactElement } from "react";
+import { useEffect, useRef, useState, type ReactElement } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -52,6 +52,8 @@ function draft(invoice: Invoice, tone: Tone, contact: string): string {
  * The message is drafted for the user, but nothing leaves the building until
  * they have read it and pressed send.
  */
+export type SendReminderValues = { tone: Tone; body: string; idempotencyKey: string };
+
 export function SendReminderDialog({
   invoice,
   contactName,
@@ -65,13 +67,27 @@ export function SendReminderDialog({
   recommendedTone?: Tone;
   trigger?: ReactElement;
   label?: string;
-  onSent?: () => void;
+  /** Awaited: the dialog stays open and shows the error on failure, closes
+   *  and toasts on success. */
+  onSent?: (values: SendReminderValues) => Promise<{ ok: boolean; message?: string }>;
 }) {
   const [open, setOpen] = useState(false);
+  const [pending, setPending] = useState(false);
   const [tone, setTone] = useState<Tone>(recommendedTone);
   const [body, setBody] = useState(() =>
     draft(invoice, recommendedTone, contactName),
   );
+  // A fresh key per open, not per mount: this dialog stays mounted across
+  // opens, and reusing one key across two separate, intentional sends would
+  // make the second one collide with the first's idempotency row instead of
+  // sending. Retries of the *same* open (a double-click before the response
+  // lands) are exactly what sharing it within one open is for. A ref, not
+  // state: it drives nothing in render, and setState directly in an effect
+  // body is a cascading-render footgun the linter refuses.
+  const idempotencyKeyRef = useRef(crypto.randomUUID());
+  useEffect(() => {
+    if (open) idempotencyKeyRef.current = crypto.randomUUID();
+  }, [open]);
 
   const changeTone = (next: Tone) => {
     setTone(next);
@@ -144,16 +160,25 @@ export function SendReminderDialog({
           </Button>
           <Button
             size="sm"
-            onClick={() => {
+            disabled={pending}
+            onClick={async () => {
+              setPending(true);
+              const result = await onSent?.({ tone, body, idempotencyKey: idempotencyKeyRef.current });
+              setPending(false);
+
+              if (result && !result.ok) {
+                toast.error("Could not send the reminder", { description: result.message });
+                return;
+              }
+
               setOpen(false);
-              onSent?.();
               toast.success("Reminder sent", {
                 description: `${TONE_LABEL[tone]} sent to ${contactName} about ${invoice.number}.`,
               });
             }}
           >
             <Mail className="size-3.5" />
-            Send now
+            {pending ? "Sending…" : "Send now"}
           </Button>
         </DialogFooter>
       </DialogContent>

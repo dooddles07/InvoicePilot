@@ -54,6 +54,13 @@ const schema = z.object({
 
 type Values = z.infer<typeof schema>;
 
+export type RecordPaymentValues = {
+  amountCents: number;
+  method: PaymentMethod;
+  reference?: string;
+  receivedOn: string;
+};
+
 export function RecordPaymentDialog({
   invoice,
   today,
@@ -64,10 +71,12 @@ export function RecordPaymentDialog({
   /** Passed in so the default date matches the demo ledger, not the wall clock. */
   today: string;
   trigger?: ReactElement;
-  /** Told what was recorded, so the caller can move its own figures. */
-  onRecorded?: (amountCents: number, receivedOn: string) => void;
+  /** Awaited: the dialog stays open and shows the error on failure, closes
+   *  and toasts on success. */
+  onRecorded?: (values: RecordPaymentValues) => Promise<{ ok: boolean; message?: string }>;
 }) {
   const [open, setOpen] = useState(false);
+  const [pending, setPending] = useState(false);
   const balance = invoice.balance_cents;
 
   const form = useForm<Values>({
@@ -99,11 +108,24 @@ export function RecordPaymentDialog({
   const amountCents = Math.round(Number(form.watch("amount") || 0) * 100);
   const remaining = Math.max(0, balance - amountCents);
 
-  function onSubmit(values: Values) {
+  async function onSubmit(values: Values) {
     const cents = Math.round(Number(values.amount) * 100);
+    setPending(true);
+    const result = await onRecorded?.({
+      amountCents: cents,
+      method: values.method as PaymentMethod,
+      reference: values.reference || undefined,
+      receivedOn: values.received_on,
+    });
+    setPending(false);
+
+    if (result && !result.ok) {
+      toast.error("Could not record the payment", { description: result.message });
+      return;
+    }
+
     setOpen(false);
     form.reset();
-    onRecorded?.(cents, values.received_on);
     toast.success("Payment recorded", {
       description: `${money(cents)} received from ${invoice.customer_name}.${
         balance - cents > 0
@@ -212,8 +234,8 @@ export function RecordPaymentDialog({
             >
               Cancel
             </Button>
-            <Button type="submit" size="sm">
-              Record payment
+            <Button type="submit" size="sm" disabled={pending}>
+              {pending ? "Recording…" : "Record payment"}
             </Button>
           </DialogFooter>
         </form>
