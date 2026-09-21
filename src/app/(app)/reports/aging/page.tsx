@@ -7,44 +7,18 @@ import { CustomerCell } from "@/components/invoicepilot/customer-cell";
 import { PageHeader } from "@/components/invoicepilot/page-header";
 import { Reveal } from "@/components/motion/reveal";
 import { Button } from "@/components/ui/button";
-import { customers, getAging, openInvoices } from "@/lib/data";
+import { handleReadError } from "@/lib/api/client";
+import { getAging } from "@/lib/api/reports";
 import { money, percent } from "@/lib/format";
-import type { AgingBucketKey } from "@/types";
 
 export const metadata: Metadata = { title: "Accounts receivable aging" };
 
-const BUCKETS: { key: AgingBucketKey; label: string; test: (d: number) => boolean }[] =
-  [
-    { key: "current", label: "Current", test: (d) => d <= 0 },
-    { key: "1_30", label: "1–30", test: (d) => d >= 1 && d <= 30 },
-    { key: "31_60", label: "31–60", test: (d) => d >= 31 && d <= 60 },
-    { key: "61_90", label: "61–90", test: (d) => d >= 61 && d <= 90 },
-    { key: "90_plus", label: "90+", test: (d) => d > 90 },
-  ];
+const BUCKET_LABELS = ["Current", "1–30", "31–60", "61–90", "90+"] as const;
 
-export default function AgingReportPage() {
-  const buckets = getAging();
+export default async function AgingReportPage() {
+  const { buckets, by_customer: rows } = await getAging().catch(handleReadError);
 
-  // Per-customer aging: the same partition, sliced by account, which is how a
-  // finance manager actually works the report.
-  const rows = customers
-    .map((customer) => {
-      const mine = openInvoices.filter((i) => i.customer_id === customer.id);
-      const cells = BUCKETS.map((b) =>
-        mine.filter((i) => b.test(i.days_overdue)).reduce((s, i) => s + i.balance_cents, 0),
-      );
-      return {
-        customer,
-        cells,
-        total: cells.reduce((s, c) => s + c, 0),
-      };
-    })
-    .filter((r) => r.total > 0)
-    .sort((a, b) => b.total - a.total);
-
-  const totals = BUCKETS.map((_, i) =>
-    rows.reduce((s, r) => s + (r.cells[i] ?? 0), 0),
-  );
+  const totals = BUCKET_LABELS.map((_, i) => rows.reduce((s, r) => s + r.cells[i], 0));
   const grandTotal = totals.reduce((s, c) => s + c, 0);
 
   return (
@@ -110,13 +84,13 @@ export default function AgingReportPage() {
                     <th scope="col" className="px-4 py-2 text-left font-medium">
                       Customer
                     </th>
-                    {BUCKETS.map((b) => (
+                    {BUCKET_LABELS.map((label) => (
                       <th
-                        key={b.key}
+                        key={label}
                         scope="col"
                         className="px-3 py-2 text-right font-medium whitespace-nowrap"
                       >
-                        {b.label}
+                        {label}
                       </th>
                     ))}
                     <th scope="col" className="px-4 py-2 text-right font-medium">
@@ -126,16 +100,13 @@ export default function AgingReportPage() {
                 </thead>
                 <tbody className="divide-y">
                   {rows.map((row) => (
-                    <tr key={row.customer.id} className="hover:bg-muted/30">
+                    <tr key={row.customer_id} className="hover:bg-muted/30">
                       <th scope="row" className="px-4 py-2 text-left font-normal">
-                        <CustomerCell
-                          id={row.customer.id}
-                          name={row.customer.name}
-                        />
+                        <CustomerCell id={row.customer_id} name={row.customer_name} />
                       </th>
                       {row.cells.map((cell, i) => (
                         <td
-                          key={BUCKETS[i]!.key}
+                          key={BUCKET_LABELS[i]}
                           data-numeric
                           className={
                             cell === 0
@@ -152,7 +123,7 @@ export default function AgingReportPage() {
                         data-numeric
                         className="px-4 py-2 text-right font-semibold"
                       >
-                        {money(row.total)}
+                        {money(row.total_cents)}
                       </td>
                     </tr>
                   ))}
@@ -164,7 +135,7 @@ export default function AgingReportPage() {
                     </th>
                     {totals.map((t, i) => (
                       <td
-                        key={BUCKETS[i]!.key}
+                        key={BUCKET_LABELS[i]}
                         data-numeric
                         className="px-3 py-2.5 text-right font-medium"
                       >
@@ -181,7 +152,7 @@ export default function AgingReportPage() {
                     </th>
                     {totals.map((t, i) => (
                       <td
-                        key={BUCKETS[i]!.key}
+                        key={BUCKET_LABELS[i]}
                         data-numeric
                         className="px-3 pb-2.5 text-right"
                       >
