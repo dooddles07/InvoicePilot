@@ -4,19 +4,20 @@ import { ArrowLeft } from "lucide-react";
 
 import { NewInvoiceForm } from "@/components/invoices/new-invoice-form";
 import { Reveal } from "@/components/motion/reveal";
-import { customers } from "@/lib/data";
-import { NOW } from "@/lib/data";
+import { handleReadError } from "@/lib/api/client";
+import { getCustomers } from "@/lib/api/customers";
 
 export const metadata: Metadata = { title: "New invoice" };
 
-export default function NewInvoicePage() {
-  const options = customers
-    .map((c) => ({
-      id: c.id,
-      name: c.name,
-      terms: c.payment_terms_days,
-    }))
-    .sort((a, b) => a.name.localeCompare(b.name));
+export default async function NewInvoicePage() {
+  const { data: customers } = await getCustomers({ limit: 500, sort: "name", order: "asc" }).catch(
+    handleReadError,
+  );
+  const options = customers.map((c) => ({
+    id: c.id,
+    name: c.name,
+    terms: c.payment_terms_days,
+  }));
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-4">
@@ -40,7 +41,7 @@ export default function NewInvoicePage() {
       <Reveal delay={0.04}>
         <NewInvoiceForm
           customers={options}
-          today={NOW.toISOString().slice(0, 10)}
+          today={new Date().toISOString().slice(0, 10)}
         />
       </Reveal>
     </div>

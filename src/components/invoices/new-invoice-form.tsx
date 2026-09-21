@@ -3,6 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { Plus, Trash2 } from "lucide-react";
+import { useState } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -19,6 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { createInvoice, sendInvoice } from "@/lib/actions/invoices";
 import { money } from "@/lib/format";
 
 const lineSchema = z.object({
@@ -93,12 +95,44 @@ export function NewInvoiceForm({
     }
   };
 
-  function onSubmit(values: Values) {
-    // ponytail: the created invoice does not appear in the list — the ledger is
-    // a module-level fixture and nothing survives the navigation. Closed by the
-    // backend write path, not by a client-side store built to be deleted.
-    toast.success("Invoice created", {
-      description: `${money(totalCents)} to ${
+  const [pending, setPending] = useState(false);
+
+  async function submit(values: Values, send: boolean) {
+    setPending(true);
+    const result = await createInvoice({
+      customer_id: values.customer_id,
+      issue_date: values.issue_date,
+      due_date: values.due_date,
+      po_number: values.po_number || undefined,
+      notes: values.notes || undefined,
+      items: values.items.map((item) => ({
+        description: item.description,
+        quantity: Number(item.quantity),
+        unit_price_cents: Math.round(Number(item.unit_price) * 100),
+      })),
+    });
+
+    if (!result.ok) {
+      setPending(false);
+      toast.error("Could not create the invoice", { description: result.message });
+      return;
+    }
+
+    if (send) {
+      const sent = await sendInvoice(result.invoiceId, {
+        tone: "friendly",
+        idempotency_key: crypto.randomUUID(),
+      });
+      if (!sent.ok) {
+        setPending(false);
+        toast.error("Invoice created, but the send failed", { description: sent.message });
+        router.push("/invoices");
+        return;
+      }
+    }
+
+    toast.success(send ? "Invoice created and sent" : "Invoice saved as draft", {
+      description: `${result.number} · ${money(totalCents)} to ${
         customers.find((c) => c.id === values.customer_id)?.name ?? "customer"
       }, due ${values.due_date}.`,
     });
@@ -109,7 +143,7 @@ export function NewInvoiceForm({
 
   return (
     <form
-      onSubmit={form.handleSubmit(onSubmit)}
+      onSubmit={form.handleSubmit((values) => submit(values, true))}
       noValidate
       className="bg-card shadow-e1 space-y-4 rounded-xl border p-4"
     >
@@ -252,6 +286,7 @@ export function NewInvoiceForm({
             type="button"
             variant="ghost"
             size="sm"
+            disabled={pending}
             onClick={() => router.push("/invoices")}
           >
             Cancel
@@ -260,16 +295,13 @@ export function NewInvoiceForm({
             type="button"
             variant="outline"
             size="sm"
-            onClick={() =>
-              toast("Saved as draft", {
-                description: "It will not be sent until you issue it.",
-              })
-            }
+            disabled={pending}
+            onClick={form.handleSubmit((values) => submit(values, false))}
           >
             Save draft
           </Button>
-          <Button type="submit" size="sm">
-            Create and send
+          <Button type="submit" size="sm" disabled={pending}>
+            {pending ? "Working…" : "Create and send"}
           </Button>
         </div>
       </div>
