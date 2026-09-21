@@ -57,6 +57,18 @@ export async function insertEmailTemplates(sql, workspaceId) {
   `;
 }
 
+/** No used_by column: the fixture's "which automation sends this" was
+ *  invented for the screen, and no automation-to-template link exists in
+ *  the schema to back it. Omitted rather than faked. */
+export async function listEmailTemplates(sql, workspaceId) {
+  return sql`
+    SELECT id, workspace_id, name, tone, subject, body, updated_at
+    FROM email_templates
+    ${inWorkspace(sql, workspaceId)}
+    ORDER BY name
+  `;
+}
+
 /** Every workspace gets all three tones at signup (insertEmailTemplates
  *  above), so a missing row means a workspace older than that guarantee --
  *  404 rather than inventing copy on the fly. */

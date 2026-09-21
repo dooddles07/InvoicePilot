@@ -1,6 +1,17 @@
+import * as notifications from "../models/notifications.js";
 import { notImplemented } from "./not-implemented.js";
 
-export const list = notImplemented;
-export const markRead = notImplemented;
-export const preferences = notImplemented;
-export const replacePreferences = notImplemented;
+export function notificationsController(sql) {
+  return {
+    async templates(request, response) {
+      response.json({
+        data: await notifications.listEmailTemplates(sql, request.principal.workspaceId),
+      });
+    },
+
+    list: notImplemented,
+    markRead: notImplemented,
+    preferences: notImplemented,
+    replacePreferences: notImplemented,
+  };
+}

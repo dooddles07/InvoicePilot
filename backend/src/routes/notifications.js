@@ -1,9 +1,11 @@
 import { Router } from "express";
 
-import * as controller from "../controllers/notifications.js";
+import { notificationsController } from "../controllers/notifications.js";
 import { authenticate } from "../middleware/authenticate.js";
+import { requirePermission } from "../middleware/require.js";
 
 export function notificationsRouter(sql, config) {
+  const controller = notificationsController(sql);
   const router = Router();
   router.use(authenticate(config.secretKey));
 
@@ -13,6 +15,8 @@ export function notificationsRouter(sql, config) {
   router.post("/read", controller.markRead);
   router.get("/preferences", controller.preferences);
   router.put("/preferences", controller.replacePreferences);
+  // Workspace config, not personal -- guarded like the rest of invoicing.
+  router.get("/templates", requirePermission("invoice:read"), controller.templates);
 
   return router;
 }
