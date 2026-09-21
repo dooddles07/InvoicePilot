@@ -1,8 +1,8 @@
 # InvoicePilot — Design System (Master)
 
-Global source of truth. Page-specific overrides live in `design-system/invoicepilot/pages/<page>.md`
-and win over anything here. The implementation is `src/app/globals.css`; this file explains
-*why*, the CSS holds the values.
+Global source of truth. No page has needed an override yet; if one ever does, it goes in
+`design-system/invoicepilot/pages/<page>.md` and wins over anything here. The implementation
+is `src/app/globals.css`; this file explains *why*, the CSS holds the values.
 
 ## Direction
 

@@ -11,7 +11,8 @@
 **Spec:** `docs/superpowers/specs/2026-09-15-express-backend-port-design.md`
 (demo access, reseed guards and the cron come from
 `docs/superpowers/specs/2026-09-11-free-tier-deployment-and-phases-3-6-design.md` §4,
-which the Express spec §10 keeps unchanged.)
+which the Express spec §10 keeps unchanged. That spec was later removed as superseded —
+commit `0c09ea8` — once the Express spec folded in everything it covered.)
 
 ## Global Constraints
 
@@ -2266,6 +2267,15 @@ is the one budget risk the plan flagged in Express spec §12 that stays
 open. Setting up UptimeRobot (or similar) against
 `https://invoicepilot-0sc2.onrender.com/health` on a 5-minute interval is
 the remaining action, and is a dashboard step outside this repository.
+
+**Update, 2026-09-21:** the frontend plan closed this with a GitHub Actions
+schedule instead (`.github/workflows/keep-awake.yml`, `cron: "*/5 * * * *"`),
+reasoning that "or equivalent" covered it. A production audit measured a
+22.66s cold start and checked GitHub's own Actions API: `total_count: 0` for
+scheduled runs on this repository, ever. The workflow never fired — the exact
+ceiling its own comment predicted ("best-effort... can skip runs under load").
+It has been deleted. This step now reverts to the original recommendation:
+set up UptimeRobot against the URL above. That remains a manual, external step.
 
 CI (`.github/workflows/ci.yml`) was not watched running on GitHub for
 these commits specifically — the backend suite ran locally against the

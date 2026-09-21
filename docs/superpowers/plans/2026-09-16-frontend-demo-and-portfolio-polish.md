@@ -1542,6 +1542,7 @@ git commit -m "docs: record the demo and polish deployment result"
 - **Lighthouse scores:** not numerically recorded. Step 9 was checked off in an earlier session (commit `46c7bf1`) by a manual Chrome DevTools run with no figures captured in this file, and no Lighthouse runner was available in this session to re-measure. If exact scores are needed, re-run Lighthouse against the production landing page and record them here.
 - **Task 1 Step 9's unset-`DEMO_EMAIL` fallback** (the "demo is unavailable" banner and "Create a workspace" button) was not exercised this session — it requires toggling an env var on a running backend, and only the production deployment (which always has `DEMO_EMAIL` set) was reachable. The primary flow it guards was verified thoroughly instead: the cold and warm timings above, plus the CTA and redirect checks in Task 2 Step 8.
 - **Task 11 Step 5** shipped as a GitHub Actions scheduled workflow (`.github/workflows/keep-awake.yml`) rather than UptimeRobot, since the plan allows "or equivalent" and this needs no third-party account. Every task in this plan is now done.
+- **Update, 2026-09-21:** that substitution did not hold up. GitHub's Actions API shows zero scheduled runs of this workflow, ever — a `*/5 * * * *` cron is exactly the frequency GitHub's best-effort scheduler is documented to drop under load. Measured cold start on the live demo: 22.66s, unchanged from before the workflow was added. It has been deleted; UptimeRobot (a dashboard step, not code) is the remaining action.
 
 ---
 
@@ -1550,7 +1551,7 @@ git commit -m "docs: record the demo and polish deployment result"
 These are not code and cannot be done from the repository:
 
 1. ~~**Demo credentials**~~ — done (Task 11, Step 1).
-2. ~~**Keep-awake monitor**~~ — done, via a GitHub Actions schedule instead of UptimeRobot (Task 11, Step 5).
+2. **Keep-awake monitor** — reopened 2026-09-21: the GitHub Actions schedule (Task 11, Step 5) never fired in practice. Set up UptimeRobot (or similar) against `https://invoicepilot-0sc2.onrender.com/health` on a 5-minute interval.
 3. ~~**Screenshots**~~ — done: `docs/screenshots/dashboard.png`, `invoices.png` and `collections.png` captured against the live production demo and confirmed rendering in the GitHub README.
 
 ## Deviations from the spec, and why
