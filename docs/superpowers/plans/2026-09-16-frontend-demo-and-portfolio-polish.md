@@ -1494,9 +1494,11 @@ Expected: the waking screen shows, then the dashboard loads. If the attempt inst
 Open the production landing page, wait ten seconds, then click "View live demo".
 Expected: the dashboard appears in about a second — the warm-up already paid the wake.
 
-- [ ] **Step 5: Set up the keep-awake monitor**
+- [x] **Step 5: Set up the keep-awake monitor**
 
 Create an UptimeRobot (or equivalent) HTTP monitor against `https://invoicepilot-0sc2.onrender.com/health` at a 5-minute interval. This closes the open item recorded in `docs/superpowers/plans/2026-09-16-express-backend-port-p3-seeder-and-deployment.md`, and it also protects the 04:00 UTC reseed cron from paying a cold start against its 60-second ceiling.
+
+Done as a GitHub Actions scheduled workflow instead of UptimeRobot — `.github/workflows/keep-awake.yml`, `cron: "*/5 * * * *"`, no third-party account needed. Known ceiling: GitHub's scheduler is best-effort and disables schedules after 60 days with no commits to the repo; switch to UptimeRobot if either bites.
 
 - [x] **Step 6: Walk the demo as a visitor would**
 
@@ -1539,7 +1541,7 @@ git commit -m "docs: record the demo and polish deployment result"
 - **Warm demo entry:** ~12s, timed by clicking "View live demo" from the landing page immediately after the cold run above (API already awake). Slower than the plan's anecdotal "about a second," but a clear, correctly-ordered contrast against the cold run.
 - **Lighthouse scores:** not numerically recorded. Step 9 was checked off in an earlier session (commit `46c7bf1`) by a manual Chrome DevTools run with no figures captured in this file, and no Lighthouse runner was available in this session to re-measure. If exact scores are needed, re-run Lighthouse against the production landing page and record them here.
 - **Task 1 Step 9's unset-`DEMO_EMAIL` fallback** (the "demo is unavailable" banner and "Create a workspace" button) was not exercised this session — it requires toggling an env var on a running backend, and only the production deployment (which always has `DEMO_EMAIL` set) was reachable. The primary flow it guards was verified thoroughly instead: the cold and warm timings above, plus the CTA and redirect checks in Task 2 Step 8.
-- **Not completed: Task 11 Step 5, the UptimeRobot keep-awake monitor.** Creating it needs an account on a third-party service, which is the author's to set up (see "Manual steps for the author" below). Everything else in this plan is done.
+- **Task 11 Step 5** shipped as a GitHub Actions scheduled workflow (`.github/workflows/keep-awake.yml`) rather than UptimeRobot, since the plan allows "or equivalent" and this needs no third-party account. Every task in this plan is now done.
 
 ---
 
@@ -1548,7 +1550,7 @@ git commit -m "docs: record the demo and polish deployment result"
 These are not code and cannot be done from the repository:
 
 1. ~~**Demo credentials**~~ — done (Task 11, Step 1).
-2. **Keep-awake monitor** — create the UptimeRobot monitor on the Render `/health` endpoint (Task 11, Step 5). Still open; needs the author's own account on a third-party service.
+2. ~~**Keep-awake monitor**~~ — done, via a GitHub Actions schedule instead of UptimeRobot (Task 11, Step 5).
 3. ~~**Screenshots**~~ — done: `docs/screenshots/dashboard.png`, `invoices.png` and `collections.png` captured against the live production demo and confirmed rendering in the GitHub README.
 
 ## Deviations from the spec, and why
