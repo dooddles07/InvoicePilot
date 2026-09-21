@@ -1,10 +1,11 @@
 import { Router } from "express";
 
-import * as controller from "../controllers/customers.js";
+import { customersController } from "../controllers/customers.js";
 import { authenticate } from "../middleware/authenticate.js";
 import { requirePermission } from "../middleware/require.js";
 
 export function customersRouter(sql, config) {
+  const controller = customersController(sql);
   const router = Router();
   router.use(authenticate(config.secretKey));
 
@@ -16,6 +17,11 @@ export function customersRouter(sql, config) {
     "/:customerId/behaviour",
     requirePermission("customer:read"),
     controller.behaviour,
+  );
+  router.get(
+    "/:customerId/events",
+    requirePermission("customer:read"),
+    controller.events,
   );
 
   return router;

@@ -19,3 +19,17 @@ export async function listInvoiceEvents(sql, workspaceId, invoiceId) {
     ORDER BY occurred_at DESC
   `;
 }
+
+/** Called from the customers controller, not its own route, the same way
+ *  listInvoiceEvents is. Capped at 20: a customer accumulates events across
+ *  every invoice it has ever had, unlike one invoice's own bounded history. */
+export async function listCustomerEvents(sql, workspaceId, customerId) {
+  return sql`
+    SELECT id, workspace_id, invoice_id, customer_id, type, channel,
+           summary, detail, actor, occurred_at
+    FROM collection_events
+    ${inWorkspace(sql, workspaceId)} AND customer_id = ${customerId}
+    ORDER BY occurred_at DESC
+    LIMIT 20
+  `;
+}
