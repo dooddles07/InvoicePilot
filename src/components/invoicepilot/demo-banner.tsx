@@ -18,8 +18,11 @@ export function DemoBanner({ workspaceId }: { workspaceId: string }) {
       <Info className="size-3.5 shrink-0" aria-hidden />
       <p>
         Demo workspace — shared with every visitor and rebuilt daily at 04:00
-        UTC. Changes you make here live in this browser session; sign-in,
-        sessions and the daily rebuild are real.
+        UTC. Everything here is real, including writes: an invoice you create
+        or a payment you record persists until the next rebuild, for every
+        visitor. Reminder emails deliver to our own inbox instead of the
+        customer&rsquo;s, since this deployment has no verified sending
+        domain.
       </p>
     </div>
   );
