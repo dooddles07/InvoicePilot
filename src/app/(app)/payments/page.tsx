@@ -3,13 +3,25 @@ import type { Metadata } from "next";
 import { PageHeader } from "@/components/invoicepilot/page-header";
 import { PaymentsTable } from "@/components/payments/payments-table";
 import { Reveal } from "@/components/motion/reveal";
-import { getKpis, payments } from "@/lib/data";
+import { handleReadError } from "@/lib/api/client";
+import { getPayments } from "@/lib/api/payments";
 import { money } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Payments" };
 
-export default function PaymentsPage() {
-  const kpis = getKpis();
+export default async function PaymentsPage() {
+  // ponytail: the demo ledger is 398 payments and the table pages in the
+  // browser, same ceiling and same upgrade path as the invoices table.
+  const { data: payments, total } = await getPayments({
+    limit: 500,
+    sort: "received_at",
+    order: "desc",
+  }).catch(handleReadError);
+
+  const since = new Date().getTime() - 30 * 24 * 60 * 60 * 1000;
+  const collected30d = payments
+    .filter((p) => new Date(p.received_at).getTime() >= since)
+    .reduce((s, p) => s + p.amount_cents, 0);
 
   return (
     <div className="mx-auto flex max-w-[1400px] flex-col gap-4">
@@ -19,9 +31,9 @@ export default function PaymentsPage() {
           description={
             <>
               <span className="tnum text-foreground font-medium">
-                {money(kpis.collected_30d_cents)}
+                {money(collected30d)}
               </span>{" "}
-              received in the last 30 days · {payments.length} payments on record
+              received in the last 30 days · {total} payments on record
             </>
           }
         />

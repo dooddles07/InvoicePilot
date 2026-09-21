@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import {
   ArrowLeft,
   CalendarClock,
@@ -20,29 +19,26 @@ import {
 } from "@/components/invoicepilot/status-badge";
 import { Timeline } from "@/components/invoicepilot/timeline";
 import { Reveal } from "@/components/motion/reveal";
+import { handleReadError } from "@/lib/api/client";
 import {
-  customers,
   getCustomer,
   getCustomerEvents,
-  getCustomerInvoices,
   getPaymentBehaviour,
-  NOW,
-  OPEN_STATUSES,
-} from "@/lib/data";
+} from "@/lib/api/customers";
+import { getInvoices } from "@/lib/api/invoices";
+import { OPEN_STATUSES } from "@/lib/data";
 import { dueLabel, formatDate, money, percent } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
-export async function generateStaticParams() {
-  return customers.map((c) => ({ id: c.id }));
-}
-
+// Per-tenant data cannot prerender: every workspace has its own customer ids.
 export async function generateMetadata({
   params,
 }: {
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
-  return { title: getCustomer(id)?.name ?? "Customer" };
+  const customer = await getCustomer(id).catch(handleReadError);
+  return { title: customer.name };
 }
 
 export default async function CustomerDetailPage({
@@ -51,13 +47,14 @@ export default async function CustomerDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const customer = getCustomer(id);
-  if (!customer) notFound();
-
-  const all = getCustomerInvoices(customer.id);
+  const customer = await getCustomer(id).catch(handleReadError);
+  const [{ data: all }, behaviour, { data: events }] = await Promise.all([
+    getInvoices({ customer_id: customer.id, limit: 500 }).catch(handleReadError),
+    getPaymentBehaviour(customer.id).catch(handleReadError),
+    getCustomerEvents(customer.id).catch(handleReadError),
+  ]);
   const open = all.filter((i) => OPEN_STATUSES.includes(i.status));
-  const behaviour = getPaymentBehaviour(customer.id);
-  const events = getCustomerEvents(customer.id);
+  const now = new Date();
 
   const stats = [
     { label: "Outstanding", value: money(customer.outstanding_cents) },
@@ -84,9 +81,11 @@ export default async function CustomerDetailPage({
                 {customer.name}
               </h1>
               <p className="text-muted-foreground text-caption">
-                {customer.industry} · customer since{" "}
-                {new Date(customer.customer_since).getUTCFullYear()} ·{" "}
-                {customer.payment_terms_days}-day terms
+                {customer.industry ?? "Industry not set"}
+                {customer.customer_since
+                  ? ` · customer since ${new Date(customer.customer_since).getUTCFullYear()}`
+                  : ""}{" "}
+                · {customer.payment_terms_days}-day terms
               </p>
               <div className="flex flex-wrap items-center gap-3">
                 <RiskBadge risk={customer.risk} />
@@ -175,7 +174,7 @@ export default async function CustomerDetailPage({
               ) : (
                 <ul className="divide-y">
                   {open.map((inv) => {
-                    const late = inv.days_overdue > 0;
+                    const late = inv.is_overdue ?? false;
                     return (
                       <li
                         key={inv.id}
@@ -187,14 +186,14 @@ export default async function CustomerDetailPage({
                         >
                           {inv.number}
                         </Link>
-                        <InvoiceStatusBadge status={inv.status} />
+                        <InvoiceStatusBadge status={inv.status} isOverdue={inv.is_overdue} />
                         <span
                           className={cn(
                             "text-caption",
                             late ? "text-danger" : "text-muted-foreground",
                           )}
                         >
-                          {dueLabel(inv.due_date, NOW)}
+                          {dueLabel(inv.due_date, now)}
                         </span>
                         <span className="figure ml-auto text-small font-semibold">
                           {money(inv.balance_cents)}
@@ -271,7 +270,7 @@ export default async function CustomerDetailPage({
                 />
                 <Detail
                   label="Customer since"
-                  value={formatDate(customer.customer_since)}
+                  value={customer.customer_since ? formatDate(customer.customer_since) : "—"}
                 />
                 <Detail label="Invoices issued" value={String(all.length)} />
               </dl>
