@@ -15,7 +15,12 @@ describe("applyMigrations", () => {
     const rows = await sql`SELECT filename FROM _migrations ORDER BY filename`;
     assert.deepEqual(
       rows.map((row) => row.filename),
-      ["0000_schema.sql", "0001_derivation_views.sql", "0002_invoice_next_action.sql"],
+      [
+        "0000_schema.sql",
+        "0001_derivation_views.sql",
+        "0002_invoice_next_action.sql",
+        "0003_api_keys_webhooks_billing.sql",
+      ],
     );
   });
 

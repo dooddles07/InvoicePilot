@@ -31,7 +31,7 @@ describe("authenticate", () => {
     const request = fakeRequest(`Bearer ${await tokenFor("admin")}`);
     let continued = false;
 
-    await authenticate(SECRET)(request, {}, () => {
+    await authenticate(null, SECRET)(request, {}, () => {
       continued = true;
     });
 
@@ -43,7 +43,7 @@ describe("authenticate", () => {
 
   it("accepts the scheme in any case", async () => {
     const request = fakeRequest(`bearer ${await tokenFor("viewer")}`);
-    await authenticate(SECRET)(request, {}, () => {});
+    await authenticate(null, SECRET)(request, {}, () => {});
     assert.equal(request.principal.role, "viewer");
   });
 
@@ -52,14 +52,14 @@ describe("authenticate", () => {
     // 403 for an absent header. 401 with WWW-Authenticate is what RFC 7235
     // specifies and what src/lib/api/session.ts reads as "signed out".
     await assert.rejects(
-      () => authenticate(SECRET)(fakeRequest(undefined), {}, () => {}),
+      () => authenticate(null, SECRET)(fakeRequest(undefined), {}, () => {}),
       AuthenticationFailed,
     );
   });
 
   it("rejects a header that is not a bearer scheme", async () => {
     await assert.rejects(
-      () => authenticate(SECRET)(fakeRequest("Basic abc123"), {}, () => {}),
+      () => authenticate(null, SECRET)(fakeRequest("Basic abc123"), {}, () => {}),
       AuthenticationFailed,
     );
   });
@@ -70,7 +70,7 @@ describe("authenticate", () => {
       "a-different-key-that-is-also-long-enough-!!",
     );
     await assert.rejects(
-      () => authenticate(SECRET)(fakeRequest(`Bearer ${token}`), {}, () => {}),
+      () => authenticate(null, SECRET)(fakeRequest(`Bearer ${token}`), {}, () => {}),
       AuthenticationFailed,
     );
   });
@@ -80,7 +80,7 @@ describe("authenticate", () => {
     // "wrong signature" tells an attacker which of their guesses was closer.
     const failures = [];
     for (const header of ["Bearer", "Bearer not.a.jwt", "Bearer "]) {
-      await authenticate(SECRET)(fakeRequest(header), {}, () => {}).catch(
+      await authenticate(null, SECRET)(fakeRequest(header), {}, () => {}).catch(
         (error) => failures.push(error.detail),
       );
     }

@@ -1,12 +1,14 @@
 /**
  * The complete endpoint inventory, real and not-implemented alike.
  *
- * ENDPOINTS is frozen: it grows only when a route is mounted, never shrinks,
- * and drives the guard-coverage and permission-parity checks below regardless
- * of whether a route is real. NOT_IMPLEMENTED is the live subset that still
- * answers 501 -- it shrinks by exactly what each phase of the fixtures-to-API
- * conversion implements, so "how much of this app is still fake" is a tested
- * number instead of a comment.
+ * ENDPOINTS grows when a route is mounted and shrinks only when one is
+ * deleted outright (Phase 8 removed the four /api/integrations rows along
+ * with the routes themselves) -- never because a stub is inconvenient to
+ * keep testing. It drives the guard-coverage and permission-parity checks
+ * below regardless of whether a route is real. NOT_IMPLEMENTED is the live
+ * subset that still answers 501 -- it shrinks by exactly what each phase of
+ * the fixtures-to-API conversion implements, so "how much of this app is
+ * still fake" is a tested number instead of a comment.
  */
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
@@ -81,11 +83,6 @@ const ENDPOINTS = [
   ["GET", "/api/reports/customer-risk", "report:read"],
   ["GET", "/api/reports/days-to-payment", "report:read"],
 
-  ["GET", "/api/integrations", "integration:read"],
-  ["POST", "/api/integrations/stripe/connect", "integration:write"],
-  ["DELETE", "/api/integrations/stripe", "integration:write"],
-  ["POST", "/api/integrations/stripe/sync", "integration:write"],
-
   ["POST", "/api/ai/analyze", "report:read"],
   ["POST", "/api/ai/draft-reminder", "invoice:read"],
   ["POST", "/api/ai/ask", "report:read"],
@@ -95,6 +92,15 @@ const ENDPOINTS = [
   ["GET", "/api/billing/invoices", null],
 
   ["GET", "/api/audit", "audit:read"],
+
+  ["GET", "/api/api-keys", "apikey:write"],
+  ["POST", "/api/api-keys", "apikey:write"],
+  ["DELETE", "/api/api-keys/key-1", "apikey:write"],
+
+  ["GET", "/api/webhooks", "integration:read"],
+  ["POST", "/api/webhooks", "integration:write"],
+  ["DELETE", "/api/webhooks/whk-1", "integration:write"],
+  ["POST", "/api/webhooks/whk-1/test", "integration:write"],
 ];
 
 function key(method, path) {
@@ -154,6 +160,24 @@ const REAL = new Set([
 
   // audit-routes.test.js
   key("GET", "/api/audit"),
+
+  // automations-routes.test.js
+  key("GET", "/api/automations"),
+  key("POST", "/api/automations"),
+  key("GET", "/api/automations/a-1"),
+  key("PATCH", "/api/automations/a-1"),
+  key("GET", "/api/automations/a-1/runs"),
+
+  // api-keys-routes.test.js
+  key("GET", "/api/api-keys"),
+  key("POST", "/api/api-keys"),
+  key("DELETE", "/api/api-keys/key-1"),
+
+  // webhooks-routes.test.js
+  key("GET", "/api/webhooks"),
+  key("POST", "/api/webhooks"),
+  key("DELETE", "/api/webhooks/whk-1"),
+  key("POST", "/api/webhooks/whk-1/test"),
 ]);
 
 const NOT_IMPLEMENTED = new Set(
@@ -201,12 +225,12 @@ function send(method, path, token) {
 const stubs = ENDPOINTS.filter(([method, path]) => NOT_IMPLEMENTED.has(key(method, path)));
 
 describe("the endpoint inventory", () => {
-  it("is 60 endpoints -- the spec's 55 plus five the port added", () => {
-    assert.equal(ENDPOINTS.length, 60);
+  it("is 63 endpoints -- the spec's 55 plus eight the port added", () => {
+    assert.equal(ENDPOINTS.length, 63);
   });
 
   it("tracks exactly the endpoints still not implemented", () => {
-    assert.equal(NOT_IMPLEMENTED.size, 30);
+    assert.equal(NOT_IMPLEMENTED.size, 21);
   });
 });
 
