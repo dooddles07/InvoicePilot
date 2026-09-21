@@ -11,7 +11,13 @@ import { after, describe, it } from "node:test";
 
 import { issueAccessToken, makePrincipal } from "../src/lib/security.js";
 import { sql } from "./helpers/database.js";
-import { makeCustomer, makeInvoice, makePayment, makeWorkspace } from "./helpers/factories.js";
+import {
+  makeCustomer,
+  makeInvoice,
+  makePayment,
+  makeUser,
+  makeWorkspace,
+} from "./helpers/factories.js";
 import { TEST_CONFIG, withApp } from "./helpers/app.js";
 
 after(() => sql.end());
@@ -21,6 +27,10 @@ async function tokenFor(workspaceId, role = "owner") {
     makePrincipal(randomUUID(), workspaceId, role),
     TEST_CONFIG.secretKey,
   );
+}
+
+async function tokenForUser(userId, workspaceId, role = "owner") {
+  return issueAccessToken(makePrincipal(userId, workspaceId, role), TEST_CONFIG.secretKey);
 }
 
 describe("GET /api/payments", () => {
@@ -98,6 +108,154 @@ describe("GET /api/payments", () => {
       assert.equal(response.status, 200);
       assert.equal(response.body.data[0].amount_cents, 90_000);
       assert.equal(response.body.data[1].amount_cents, 1_000);
+    });
+  });
+});
+
+describe("POST /api/payments", () => {
+  it("records a partial payment and leaves the invoice open", async () => {
+    await withApp(async ({ send, tx }) => {
+      const ws = await makeWorkspace(tx);
+      const user = await makeUser(tx, { fullName: "Pat Owner" });
+      const customer = await makeCustomer(tx, ws, { name: "Partial Co" });
+      const invoiceId = await makeInvoice(tx, ws, customer, { amount: 10_000, dueOffsetDays: 10 });
+
+      const response = await send("POST", "/api/payments", {
+        token: await tokenForUser(user, ws),
+        body: {
+          invoice_id: invoiceId,
+          amount_cents: 4_000,
+          method: "card",
+          received_at: "2026-01-15",
+        },
+      });
+
+      assert.equal(response.status, 201);
+      assert.equal(response.body.payment.amount_cents, 4_000);
+      assert.equal(response.body.invoice.status, "partially_paid");
+      assert.equal(response.body.invoice.paid_cents, 4_000);
+      assert.equal(response.body.invoice.balance_cents, 6_000);
+    });
+  });
+
+  it("settles the invoice when the payment covers the full balance", async () => {
+    await withApp(async ({ send, tx }) => {
+      const ws = await makeWorkspace(tx);
+      const user = await makeUser(tx);
+      const customer = await makeCustomer(tx, ws, { name: "Full Co" });
+      const invoiceId = await makeInvoice(tx, ws, customer, { amount: 10_000, dueOffsetDays: 10 });
+
+      const response = await send("POST", "/api/payments", {
+        token: await tokenForUser(user, ws),
+        body: {
+          invoice_id: invoiceId,
+          amount_cents: 10_000,
+          method: "bank_transfer",
+          received_at: "2026-01-15",
+        },
+      });
+
+      assert.equal(response.status, 201);
+      assert.equal(response.body.invoice.status, "paid");
+      assert.equal(response.body.invoice.balance_cents, 0);
+      assert.equal(response.body.invoice.paid_date, "2026-01-15");
+    });
+  });
+
+  it("rejects an amount that exceeds the remaining balance", async () => {
+    await withApp(async ({ send, tx }) => {
+      const ws = await makeWorkspace(tx);
+      const user = await makeUser(tx);
+      const customer = await makeCustomer(tx, ws, { name: "Over Co" });
+      const invoiceId = await makeInvoice(tx, ws, customer, { amount: 10_000, dueOffsetDays: 10 });
+
+      const response = await send("POST", "/api/payments", {
+        token: await tokenForUser(user, ws),
+        body: {
+          invoice_id: invoiceId,
+          amount_cents: 10_001,
+          method: "card",
+          received_at: "2026-01-15",
+        },
+      });
+
+      assert.equal(response.status, 422);
+    });
+  });
+
+  it("refuses a payment on a draft invoice", async () => {
+    await withApp(async ({ send, tx }) => {
+      const ws = await makeWorkspace(tx);
+      const user = await makeUser(tx);
+      const customer = await makeCustomer(tx, ws, { name: "Draft Co" });
+      const invoiceId = await makeInvoice(tx, ws, customer, {
+        amount: 10_000,
+        status: "draft",
+        dueOffsetDays: 10,
+      });
+
+      const response = await send("POST", "/api/payments", {
+        token: await tokenForUser(user, ws),
+        body: {
+          invoice_id: invoiceId,
+          amount_cents: 1_000,
+          method: "card",
+          received_at: "2026-01-15",
+        },
+      });
+
+      assert.equal(response.status, 409);
+    });
+  });
+
+  it("refuses a payment on an invoice already paid in full", async () => {
+    await withApp(async ({ send, tx }) => {
+      const ws = await makeWorkspace(tx);
+      const user = await makeUser(tx);
+      const customer = await makeCustomer(tx, ws, { name: "Paid Co" });
+      const invoiceId = await makeInvoice(tx, ws, customer, {
+        amount: 10_000,
+        paid: 10_000,
+        status: "paid",
+        dueOffsetDays: 10,
+      });
+
+      const response = await send("POST", "/api/payments", {
+        token: await tokenForUser(user, ws),
+        body: {
+          invoice_id: invoiceId,
+          amount_cents: 1_000,
+          method: "card",
+          received_at: "2026-01-15",
+        },
+      });
+
+      assert.equal(response.status, 409);
+    });
+  });
+
+  it("answers 404 for another workspace's invoice", async () => {
+    await withApp(async ({ send, tx }) => {
+      const mine = await makeWorkspace(tx);
+      const theirs = await makeWorkspace(tx);
+      const user = await makeUser(tx);
+      const theirCustomer = await makeCustomer(tx, theirs, { name: "Other Co" });
+      const theirInvoice = await makeInvoice(tx, theirs, theirCustomer, {
+        amount: 10_000,
+        dueOffsetDays: 10,
+      });
+
+      const response = await send("POST", "/api/payments", {
+        token: await tokenForUser(user, mine),
+        body: {
+          invoice_id: theirInvoice,
+          amount_cents: 1_000,
+          method: "card",
+          received_at: "2026-01-15",
+        },
+      });
+
+      assert.equal(response.status, 404);
     });
   });
 });

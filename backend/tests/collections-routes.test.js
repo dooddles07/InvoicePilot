@@ -11,8 +11,9 @@ import { randomUUID } from "node:crypto";
 import { after, describe, it } from "node:test";
 
 import { issueAccessToken, makePrincipal } from "../src/lib/security.js";
+import { insertEmailTemplates } from "../src/models/notifications.js";
 import { sql } from "./helpers/database.js";
-import { makeCustomer, makeInvoice, makeWorkspace } from "./helpers/factories.js";
+import { makeCustomer, makeInvoice, makeUser, makeWorkspace } from "./helpers/factories.js";
 import { TEST_CONFIG, withApp } from "./helpers/app.js";
 
 after(() => sql.end());
@@ -22,6 +23,10 @@ async function tokenFor(workspaceId, role = "owner") {
     makePrincipal(randomUUID(), workspaceId, role),
     TEST_CONFIG.secretKey,
   );
+}
+
+async function tokenForUser(userId, workspaceId, role = "owner") {
+  return issueAccessToken(makePrincipal(userId, workspaceId, role), TEST_CONFIG.secretKey);
 }
 
 describe("GET /api/collections/pipeline", () => {
@@ -186,6 +191,51 @@ describe("GET /api/collections/summary", () => {
 
       assert.equal(response.body.recoverable_cents, 0);
       assert.equal(response.body.contact_count, 0);
+    });
+  });
+});
+
+describe("POST /api/collections/reminders", () => {
+  it("sends a reminder on an already-sent invoice without changing its status", async () => {
+    await withApp(async ({ send, tx }) => {
+      const ws = await makeWorkspace(tx);
+      await insertEmailTemplates(tx, ws);
+      const user = await makeUser(tx);
+      const customer = await makeCustomer(tx, ws, { name: "Reminder Co" });
+      const invoiceId = await makeInvoice(tx, ws, customer, {
+        amount: 20_000,
+        status: "sent",
+        dueOffsetDays: -15,
+      });
+
+      const response = await send("POST", "/api/collections/reminders", {
+        token: await tokenForUser(user, ws),
+        body: { invoice_id: invoiceId, tone: "firm", idempotency_key: "coll-reminder-1" },
+      });
+
+      assert.equal(response.status, 200);
+      assert.equal(response.body.status, "sent");
+    });
+  });
+
+  it("answers 404 for another workspace's invoice", async () => {
+    await withApp(async ({ send, tx }) => {
+      const mine = await makeWorkspace(tx);
+      const theirs = await makeWorkspace(tx);
+      const user = await makeUser(tx);
+      const theirCustomer = await makeCustomer(tx, theirs, { name: "Other Co" });
+      const theirInvoice = await makeInvoice(tx, theirs, theirCustomer, {
+        amount: 10_000,
+        status: "sent",
+        dueOffsetDays: -10,
+      });
+
+      const response = await send("POST", "/api/collections/reminders", {
+        token: await tokenForUser(user, mine),
+        body: { invoice_id: theirInvoice, idempotency_key: "cross-tenant-reminder" },
+      });
+
+      assert.equal(response.status, 404);
     });
   });
 });

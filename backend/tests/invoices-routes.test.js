@@ -11,12 +11,14 @@ import { randomUUID } from "node:crypto";
 import { after, describe, it } from "node:test";
 
 import { issueAccessToken, makePrincipal } from "../src/lib/security.js";
+import { insertEmailTemplates } from "../src/models/notifications.js";
 import { sql } from "./helpers/database.js";
 import {
   makeCollectionEvent,
   makeCustomer,
   makeInvoice,
   makeInvoiceItems,
+  makeUser,
   makeWorkspace,
 } from "./helpers/factories.js";
 import { TEST_CONFIG, withApp } from "./helpers/app.js";
@@ -28,6 +30,10 @@ async function tokenFor(workspaceId, role = "owner") {
     makePrincipal(randomUUID(), workspaceId, role),
     TEST_CONFIG.secretKey,
   );
+}
+
+async function tokenForUser(userId, workspaceId, role = "owner") {
+  return issueAccessToken(makePrincipal(userId, workspaceId, role), TEST_CONFIG.secretKey);
 }
 
 describe("GET /api/invoices", () => {
@@ -265,6 +271,299 @@ describe("GET /api/invoices/:invoiceId/events", () => {
 
       const response = await send("GET", `/api/invoices/${theirInvoice}/events`, {
         token: await tokenFor(mine),
+      });
+
+      assert.equal(response.status, 404);
+    });
+  });
+});
+
+describe("POST /api/invoices", () => {
+  it("creates a draft invoice with the item total summed server-side", async () => {
+    await withApp(async ({ send, tx }) => {
+      const ws = await makeWorkspace(tx);
+      const user = await makeUser(tx);
+      const customer = await makeCustomer(tx, ws, { name: "New Co" });
+
+      const response = await send("POST", "/api/invoices", {
+        token: await tokenForUser(user, ws),
+        body: {
+          customer_id: customer,
+          issue_date: "2026-01-01",
+          due_date: "2026-01-31",
+          items: [
+            { description: "Design", quantity: 2, unit_price_cents: 5_000 },
+            { description: "Build", quantity: 1, unit_price_cents: 12_000 },
+          ],
+        },
+      });
+
+      assert.equal(response.status, 201);
+      assert.equal(response.body.status, "draft");
+      assert.equal(response.body.amount_cents, 22_000);
+      assert.equal(response.body.items.length, 2);
+      assert.match(response.body.number, /^INV-\d{4}-\d{5}$/);
+    });
+  });
+
+  it("answers 404 for a customer that belongs to another workspace", async () => {
+    await withApp(async ({ send, tx }) => {
+      const mine = await makeWorkspace(tx);
+      const theirs = await makeWorkspace(tx);
+      const user = await makeUser(tx);
+      const theirCustomer = await makeCustomer(tx, theirs, { name: "Other Co" });
+
+      const response = await send("POST", "/api/invoices", {
+        token: await tokenForUser(user, mine),
+        body: {
+          customer_id: theirCustomer,
+          issue_date: "2026-01-01",
+          due_date: "2026-01-31",
+          items: [{ description: "Design", quantity: 1, unit_price_cents: 5_000 }],
+        },
+      });
+
+      assert.equal(response.status, 404);
+    });
+  });
+
+  it("rejects an invoice with no line items", async () => {
+    await withApp(async ({ send, tx }) => {
+      const ws = await makeWorkspace(tx);
+      const user = await makeUser(tx);
+      const customer = await makeCustomer(tx, ws, { name: "Empty Co" });
+
+      const response = await send("POST", "/api/invoices", {
+        token: await tokenForUser(user, ws),
+        body: {
+          customer_id: customer,
+          issue_date: "2026-01-01",
+          due_date: "2026-01-31",
+          items: [],
+        },
+      });
+
+      assert.equal(response.status, 422);
+    });
+  });
+});
+
+describe("PATCH /api/invoices/:invoiceId", () => {
+  it("updates po_number and notes", async () => {
+    await withApp(async ({ send, tx }) => {
+      const ws = await makeWorkspace(tx);
+      const user = await makeUser(tx);
+      const customer = await makeCustomer(tx, ws, { name: "Edit Co" });
+      const invoiceId = await makeInvoice(tx, ws, customer, { amount: 10_000, dueOffsetDays: 10 });
+
+      const response = await send("PATCH", `/api/invoices/${invoiceId}`, {
+        token: await tokenForUser(user, ws),
+        body: { po_number: "PO-999", notes: "Rush order" },
+      });
+
+      assert.equal(response.status, 200);
+      assert.equal(response.body.po_number, "PO-999");
+      assert.equal(response.body.notes, "Rush order");
+    });
+  });
+
+  it("marks a sent invoice disputed and logs it", async () => {
+    await withApp(async ({ send, tx }) => {
+      const ws = await makeWorkspace(tx);
+      const user = await makeUser(tx);
+      const customer = await makeCustomer(tx, ws, { name: "Dispute Co" });
+      const invoiceId = await makeInvoice(tx, ws, customer, {
+        amount: 10_000,
+        status: "sent",
+        dueOffsetDays: 10,
+      });
+
+      const response = await send("PATCH", `/api/invoices/${invoiceId}`, {
+        token: await tokenForUser(user, ws),
+        body: { status: "disputed" },
+      });
+
+      assert.equal(response.status, 200);
+      assert.equal(response.body.status, "disputed");
+
+      const events = await send("GET", `/api/invoices/${invoiceId}/events`, {
+        token: await tokenForUser(user, ws),
+      });
+      assert.equal(events.body.data[0].type, "dispute_raised");
+    });
+  });
+
+  it("refuses to dispute a draft invoice", async () => {
+    await withApp(async ({ send, tx }) => {
+      const ws = await makeWorkspace(tx);
+      const user = await makeUser(tx);
+      const customer = await makeCustomer(tx, ws, { name: "Draft Dispute Co" });
+      const invoiceId = await makeInvoice(tx, ws, customer, {
+        amount: 10_000,
+        status: "draft",
+        dueOffsetDays: 10,
+      });
+
+      const response = await send("PATCH", `/api/invoices/${invoiceId}`, {
+        token: await tokenForUser(user, ws),
+        body: { status: "disputed" },
+      });
+
+      assert.equal(response.status, 409);
+    });
+  });
+
+  it("rejects an empty patch", async () => {
+    await withApp(async ({ send, tx }) => {
+      const ws = await makeWorkspace(tx);
+      const user = await makeUser(tx);
+      const customer = await makeCustomer(tx, ws, { name: "Noop Co" });
+      const invoiceId = await makeInvoice(tx, ws, customer, { amount: 10_000, dueOffsetDays: 10 });
+
+      const response = await send("PATCH", `/api/invoices/${invoiceId}`, {
+        token: await tokenForUser(user, ws),
+        body: {},
+      });
+
+      assert.equal(response.status, 422);
+    });
+  });
+
+  it("answers 404 for another workspace's invoice", async () => {
+    await withApp(async ({ send, tx }) => {
+      const mine = await makeWorkspace(tx);
+      const theirs = await makeWorkspace(tx);
+      const user = await makeUser(tx);
+      const theirCustomer = await makeCustomer(tx, theirs, { name: "Other Co" });
+      const theirInvoice = await makeInvoice(tx, theirs, theirCustomer, {
+        amount: 10_000,
+        dueOffsetDays: 10,
+      });
+
+      const response = await send("PATCH", `/api/invoices/${theirInvoice}`, {
+        token: await tokenForUser(user, mine),
+        body: { notes: "hijacked" },
+      });
+
+      assert.equal(response.status, 404);
+    });
+  });
+});
+
+describe("POST /api/invoices/:invoiceId/send", () => {
+  it("sends a draft invoice, transitions it to sent, and logs the send", async () => {
+    await withApp(async ({ send, tx }) => {
+      const ws = await makeWorkspace(tx);
+      await insertEmailTemplates(tx, ws);
+      const user = await makeUser(tx, { fullName: "Sender Person" });
+      const customer = await makeCustomer(tx, ws, { name: "Send Co" });
+      const invoiceId = await makeInvoice(tx, ws, customer, {
+        amount: 10_000,
+        status: "draft",
+        dueOffsetDays: 10,
+      });
+
+      const response = await send("POST", `/api/invoices/${invoiceId}/send`, {
+        token: await tokenForUser(user, ws),
+        body: { tone: "friendly", idempotency_key: "send-1" },
+      });
+
+      assert.equal(response.status, 200);
+      assert.equal(response.body.status, "sent");
+      assert.ok(response.body.sent_at);
+
+      const events = await send("GET", `/api/invoices/${invoiceId}/events`, {
+        token: await tokenForUser(user, ws),
+      });
+      assert.equal(events.body.data[0].type, "invoice_sent");
+    });
+  });
+
+  it("the same idempotency key twice does not send or log twice", async () => {
+    await withApp(async ({ send, tx }) => {
+      const ws = await makeWorkspace(tx);
+      await insertEmailTemplates(tx, ws);
+      const user = await makeUser(tx);
+      const customer = await makeCustomer(tx, ws, { name: "Idempotent Co" });
+      const invoiceId = await makeInvoice(tx, ws, customer, {
+        amount: 10_000,
+        status: "draft",
+        dueOffsetDays: 10,
+      });
+      const token = await tokenForUser(user, ws);
+      const body = { tone: "friendly", idempotency_key: "same-key" };
+
+      const first = await send("POST", `/api/invoices/${invoiceId}/send`, { token, body });
+      const second = await send("POST", `/api/invoices/${invoiceId}/send`, { token, body });
+
+      assert.equal(first.status, 200);
+      assert.equal(second.status, 200);
+
+      const events = await send("GET", `/api/invoices/${invoiceId}/events`, { token });
+      assert.equal(events.body.data.length, 1);
+    });
+  });
+
+  it("a later reminder does not re-send the initial invoice_sent event", async () => {
+    await withApp(async ({ send, tx }) => {
+      const ws = await makeWorkspace(tx);
+      await insertEmailTemplates(tx, ws);
+      const user = await makeUser(tx);
+      const customer = await makeCustomer(tx, ws, { name: "Reminder Co" });
+      const invoiceId = await makeInvoice(tx, ws, customer, {
+        amount: 10_000,
+        status: "sent",
+        dueOffsetDays: -20,
+      });
+      const token = await tokenForUser(user, ws);
+
+      const response = await send("POST", `/api/invoices/${invoiceId}/send`, {
+        token,
+        body: { tone: "firm", idempotency_key: "reminder-1" },
+      });
+
+      assert.equal(response.status, 200);
+      assert.equal(response.body.status, "sent");
+
+      const events = await send("GET", `/api/invoices/${invoiceId}/events`, { token });
+      assert.equal(events.body.data[0].type, "reminder_sent");
+    });
+  });
+
+  it("refuses to send a disputed invoice", async () => {
+    await withApp(async ({ send, tx }) => {
+      const ws = await makeWorkspace(tx);
+      const user = await makeUser(tx);
+      const customer = await makeCustomer(tx, ws, { name: "Blocked Co" });
+      const invoiceId = await makeInvoice(tx, ws, customer, {
+        amount: 10_000,
+        status: "disputed",
+        dueOffsetDays: 10,
+      });
+
+      const response = await send("POST", `/api/invoices/${invoiceId}/send`, {
+        token: await tokenForUser(user, ws),
+        body: { idempotency_key: "blocked-1" },
+      });
+
+      assert.equal(response.status, 409);
+    });
+  });
+
+  it("answers 404 for another workspace's invoice", async () => {
+    await withApp(async ({ send, tx }) => {
+      const mine = await makeWorkspace(tx);
+      const theirs = await makeWorkspace(tx);
+      const user = await makeUser(tx);
+      const theirCustomer = await makeCustomer(tx, theirs, { name: "Other Co" });
+      const theirInvoice = await makeInvoice(tx, theirs, theirCustomer, {
+        amount: 10_000,
+        dueOffsetDays: 10,
+      });
+
+      const response = await send("POST", `/api/invoices/${theirInvoice}/send`, {
+        token: await tokenForUser(user, mine),
+        body: { idempotency_key: "cross-tenant" },
       });
 
       assert.equal(response.status, 404);
