@@ -87,7 +87,7 @@ export function CustomersTable({ customers }: { customers: Customer[] }) {
           return (
             row.original.name.toLowerCase().includes(q) ||
             row.original.contact_name.toLowerCase().includes(q) ||
-            row.original.industry.toLowerCase().includes(q)
+            (row.original.industry ?? "").toLowerCase().includes(q)
           );
         },
         header: ({ column }) => (
@@ -101,7 +101,7 @@ export function CustomersTable({ customers }: { customers: Customer[] }) {
           <CustomerCell
             id={row.original.id}
             name={row.original.name}
-            sublabel={row.original.industry}
+            sublabel={row.original.industry ?? undefined}
           />
         ),
       },
@@ -317,7 +317,11 @@ export function CustomersTable({ customers }: { customers: Customer[] }) {
                 return (
                   <li key={row.id} className="space-y-2 p-3">
                     <div className="flex items-start justify-between gap-2">
-                      <CustomerCell id={c.id} name={c.name} sublabel={c.industry} />
+                      <CustomerCell
+                        id={c.id}
+                        name={c.name}
+                        sublabel={c.industry ?? undefined}
+                      />
                       <span className="figure shrink-0 text-small font-semibold">
                         {money(c.outstanding_cents)}
                       </span>

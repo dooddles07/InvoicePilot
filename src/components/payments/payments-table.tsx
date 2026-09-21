@@ -78,7 +78,7 @@ export function PaymentsTable({ payments }: { payments: Payment[] }) {
           return (
             row.original.customer_name.toLowerCase().includes(q) ||
             row.original.invoice_number.toLowerCase().includes(q) ||
-            row.original.reference.toLowerCase().includes(q)
+            (row.original.reference ?? "").toLowerCase().includes(q)
           );
         },
         header: ({ column }) => (
@@ -125,7 +125,7 @@ export function PaymentsTable({ payments }: { payments: Payment[] }) {
         header: () => <span className={HEAD_LABEL}>Reference</span>,
         cell: ({ row }) => (
           <span className="text-muted-foreground font-mono text-caption">
-            {row.original.reference}
+            {row.original.reference ?? "—"}
           </span>
         ),
       },
@@ -298,7 +298,7 @@ export function PaymentsTable({ payments }: { payments: Payment[] }) {
                       </span>
                     </div>
                     <p className="text-muted-foreground text-caption">
-                      {METHOD_LABEL[p.method]} · {p.reference} ·{" "}
+                      {METHOD_LABEL[p.method]} · {p.reference ?? "—"} ·{" "}
                       {formatDate(p.received_at)}
                     </p>
                   </li>
