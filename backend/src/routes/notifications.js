@@ -7,7 +7,7 @@ import { requirePermission } from "../middleware/require.js";
 export function notificationsRouter(sql, config) {
   const controller = notificationsController(sql);
   const router = Router();
-  router.use(authenticate(config.secretKey));
+  router.use(authenticate(sql, config.secretKey));
 
   // Guarded by a bearer token and nothing more: a notification is addressed to
   // the caller, so there is no role that should see someone else's.

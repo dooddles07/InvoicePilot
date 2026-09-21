@@ -7,7 +7,7 @@ import { requirePermission } from "../middleware/require.js";
 export function customersRouter(sql, config) {
   const controller = customersController(sql);
   const router = Router();
-  router.use(authenticate(config.secretKey));
+  router.use(authenticate(sql, config.secretKey));
 
   router.get("/", requirePermission("customer:read"), controller.list);
   router.post("/", requirePermission("customer:write"), controller.create);

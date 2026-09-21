@@ -6,7 +6,7 @@ import { requirePermission } from "../middleware/require.js";
 
 export function billingRouter(sql, config) {
   const router = Router();
-  router.use(authenticate(config.secretKey));
+  router.use(authenticate(sql, config.secretKey));
 
   router.get("/subscription", controller.subscription);
   // billing:write is granted by no role, so only owner reaches this, through

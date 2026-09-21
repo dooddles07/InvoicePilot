@@ -7,7 +7,7 @@ import { requirePermission } from "../middleware/require.js";
 export function workspacesRouter(sql, config) {
   const controller = workspacesController(sql);
   const router = Router();
-  router.use(authenticate(config.secretKey));
+  router.use(authenticate(sql, config.secretKey));
 
   router.get("/", controller.list);
   router.post("/", controller.create);

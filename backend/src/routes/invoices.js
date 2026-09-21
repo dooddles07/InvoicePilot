@@ -7,7 +7,7 @@ import { requirePermission } from "../middleware/require.js";
 export function invoicesRouter(sql, config) {
   const controller = invoicesController(sql, config);
   const router = Router();
-  router.use(authenticate(config.secretKey));
+  router.use(authenticate(sql, config.secretKey));
 
   router.get("/", requirePermission("invoice:read"), controller.list);
   router.post("/", requirePermission("invoice:write"), controller.create);

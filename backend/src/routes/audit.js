@@ -7,7 +7,7 @@ import { requirePermission } from "../middleware/require.js";
 export function auditRouter(sql, config) {
   const controller = auditController(sql);
   const router = Router();
-  router.use(authenticate(config.secretKey));
+  router.use(authenticate(sql, config.secretKey));
 
   router.get("/", requirePermission("audit:read"), controller.list);
 

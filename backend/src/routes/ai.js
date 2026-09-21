@@ -7,7 +7,7 @@ import { requirePermission } from "../middleware/require.js";
 export function aiRouter(sql, config) {
   const controller = aiController(sql);
   const router = Router();
-  router.use(authenticate(config.secretKey));
+  router.use(authenticate(sql, config.secretKey));
 
   router.post("/analyze", requirePermission("report:read"), controller.analyze);
   router.post("/draft-reminder", requirePermission("invoice:read"), controller.draftReminder);

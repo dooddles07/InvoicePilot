@@ -7,7 +7,7 @@ import { requirePermission } from "../middleware/require.js";
 export function reportsRouter(sql, config) {
   const controller = reportsController(sql);
   const router = Router();
-  router.use(authenticate(config.secretKey));
+  router.use(authenticate(sql, config.secretKey));
   router.use(requirePermission("report:read"));
 
   router.get("/summary", controller.summary);

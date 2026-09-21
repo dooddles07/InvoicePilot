@@ -17,7 +17,7 @@ export function authRouter(sql, config) {
   router.post("/logout", controller.logout);
   router.post(
     "/switch-workspace",
-    authenticate(config.secretKey),
+    authenticate(sql, config.secretKey),
     controller.switchWorkspace,
   );
   // Guarded by nothing, as in app/api/routes/auth.py.

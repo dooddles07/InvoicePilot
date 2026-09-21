@@ -7,7 +7,7 @@ import { requirePermission } from "../middleware/require.js";
 export function collectionsRouter(sql, config) {
   const controller = collectionsController(sql, config);
   const router = Router();
-  router.use(authenticate(config.secretKey));
+  router.use(authenticate(sql, config.secretKey));
 
   router.get("/pipeline", requirePermission("invoice:read"), controller.pipeline);
   router.get("/queue", requirePermission("invoice:read"), controller.queue);
