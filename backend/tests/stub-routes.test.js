@@ -1,10 +1,12 @@
 /**
- * Every endpoint that exists and does nothing yet.
+ * The complete endpoint inventory, real and not-implemented alike.
  *
- * Their only assertion is the one spec section 13 asks for: the status and the
- * detail string match the Python service they replace. The app is built with a
- * null database handle, so a stub that grew a query would fail here rather
- * than open a connection nobody expected.
+ * ENDPOINTS is frozen: it grows only when a route is mounted, never shrinks,
+ * and drives the guard-coverage and permission-parity checks below regardless
+ * of whether a route is real. NOT_IMPLEMENTED is the live subset that still
+ * answers 501 -- it shrinks by exactly what each phase of the fixtures-to-API
+ * conversion implements, so "how much of this app is still fake" is a tested
+ * number instead of a comment.
  */
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
@@ -19,8 +21,15 @@ const DETAIL = "Not implemented: the service layer for this route is not wired y
 
 // method, path, and the permission the route is guarded by: null for a route
 // that needs only a bearer token, "anonymous" for one guarded by nothing.
-const STUBS = [
+const ENDPOINTS = [
+  ["POST", "/api/auth/signup", "anonymous"],
+  ["POST", "/api/auth/login", "anonymous"],
+  ["POST", "/api/auth/refresh", "anonymous"],
+  ["POST", "/api/auth/logout", "anonymous"],
+  ["POST", "/api/auth/switch-workspace", null],
   ["POST", "/api/auth/password-reset", "anonymous"],
+
+  ["GET", "/api/users/me", null],
   ["PATCH", "/api/users/me", null],
 
   ["GET", "/api/workspaces", null],
@@ -83,6 +92,28 @@ const STUBS = [
   ["GET", "/api/audit", "audit:read"],
 ];
 
+function key(method, path) {
+  return `${method} ${path}`;
+}
+
+// These 6 are real; their behaviour is asserted by auth-routes.test.js, not
+// here. Every phase of the fixtures-to-API conversion moves rows out of
+// NOT_IMPLEMENTED, below, as it wires the domain behind them.
+const REAL = new Set([
+  key("POST", "/api/auth/signup"),
+  key("POST", "/api/auth/login"),
+  key("POST", "/api/auth/refresh"),
+  key("POST", "/api/auth/logout"),
+  key("POST", "/api/auth/switch-workspace"),
+  key("GET", "/api/users/me"),
+]);
+
+const NOT_IMPLEMENTED = new Set(
+  ENDPOINTS.filter(([method, path]) => !REAL.has(key(method, path))).map(
+    ([method, path]) => key(method, path),
+  ),
+);
+
 let server;
 let origin;
 
@@ -119,14 +150,20 @@ function send(method, path, token) {
   });
 }
 
+const stubs = ENDPOINTS.filter(([method, path]) => NOT_IMPLEMENTED.has(key(method, path)));
+
 describe("the endpoint inventory", () => {
-  it("is 49 stubs, which with 6 real endpoints is the 55 the spec counts", () => {
-    assert.equal(STUBS.length, 49);
+  it("is 55 endpoints, matching the spec's count for the service it replaced", () => {
+    assert.equal(ENDPOINTS.length, 55);
+  });
+
+  it("tracks exactly the endpoints still not implemented", () => {
+    assert.equal(NOT_IMPLEMENTED.size, 49);
   });
 });
 
 describe("with no credentials", () => {
-  for (const [method, path, permission] of STUBS) {
+  for (const [method, path, permission] of stubs) {
     const expected = permission === "anonymous" ? 501 : 401;
     it(`${method} ${path} answers ${expected}`, async () => {
       const response = await send(method, path, null);
@@ -136,7 +173,7 @@ describe("with no credentials", () => {
 });
 
 describe("as an owner", () => {
-  for (const [method, path] of STUBS) {
+  for (const [method, path] of stubs) {
     it(`${method} ${path} answers 501`, async () => {
       const response = await send(method, path, await tokenFor("owner"));
       assert.equal(response.status, 501);
@@ -152,7 +189,7 @@ describe("as an owner", () => {
 });
 
 describe("as a viewer", () => {
-  for (const [method, path, permission] of STUBS) {
+  for (const [method, path, permission] of stubs) {
     const granted =
       permission === "anonymous" ||
       permission === null ||
@@ -206,7 +243,7 @@ describe("the guards the routers actually mount", () => {
       }
     }
     const fromTable = new Set(
-      STUBS.map(([, , permission]) => permission).filter(
+      ENDPOINTS.map(([, , permission]) => permission).filter(
         (permission) => permission && permission !== "anonymous",
       ),
     );
