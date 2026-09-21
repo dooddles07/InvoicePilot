@@ -22,6 +22,7 @@ import * as notificationsModel from "../models/notifications.js";
 import * as paymentsModel from "../models/payments.js";
 import { Conflict, ValidationFailed } from "../middleware/errors.js";
 import { deliverEmail } from "./email.js";
+import { dispatchEvent } from "./webhooks.js";
 
 function money(cents) {
   return new Intl.NumberFormat("en-US", {
@@ -88,6 +89,19 @@ export async function recordPayment(sql, workspaceId, principal, body) {
       targetType: "invoice",
       targetId: invoice.id,
     });
+
+    // A webhook target being unreachable must not fail the payment that was
+    // already written -- only the notification about it.
+    try {
+      await dispatchEvent(tx, workspaceId, "payment.received", {
+        invoice_id: invoice.id,
+        invoice_number: invoice.number,
+        customer_name: invoice.customer_name,
+        amount_cents: body.amount_cents,
+      });
+    } catch {
+      // Best-effort: the delivery log already recorded the attempt.
+    }
 
     // Re-read through invoice_state rather than trust applyPaymentToInvoice's
     // RETURNING: that UPDATE runs against the raw invoices table, which has
@@ -194,11 +208,14 @@ const UNSENDABLE = {
  * already sent. idempotencyKey is caller-supplied (not generated here) so a
  * retried request with the same key collides instead of sending twice.
  */
-export async function sendInvoiceEmail(sql, config, workspaceId, principal, invoiceId, { tone, idempotencyKey, subjectOverride, bodyOverride }) {
+export async function sendInvoiceEmail(sql, config, workspaceId, principal, invoiceId, { tone, idempotencyKey, subjectOverride, bodyOverride, actorOverride }) {
   const invoice = await invoicesModel.findInvoiceForWrite(sql, workspaceId, invoiceId);
   if (UNSENDABLE[invoice.status]) throw new Conflict(UNSENDABLE[invoice.status]);
 
-  const actor = await actorLabel(sql, principal);
+  // The daily automation evaluator has no human principal to name -- it
+  // passes its own automation's name instead, which is also what
+  // services/automations.js's recovered_cents_30d attribution joins on.
+  const actor = actorOverride ?? (await actorLabel(sql, principal));
   const wasFirstSend = invoice.status === "draft";
 
   // The dialog drafts from a template and lets a person edit it before it
@@ -271,6 +288,17 @@ export async function sendInvoiceEmail(sql, config, workspaceId, principal, invo
       targetType: "invoice",
       targetId: invoice.id,
     });
+
+    try {
+      await dispatchEvent(tx, workspaceId, wasFirstSend ? "invoice.sent" : "reminder.sent", {
+        invoice_id: invoice.id,
+        invoice_number: invoice.number,
+        customer_name: invoice.customer_name,
+        amount_cents: invoice.balance_cents,
+      });
+    } catch {
+      // Best-effort: the delivery log already recorded the attempt.
+    }
 
     return { log, invoice: await invoicesModel.findInvoiceForWrite(tx, workspaceId, invoiceId) };
   });
