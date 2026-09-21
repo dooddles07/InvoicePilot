@@ -1448,7 +1448,7 @@ Replace `README.md` entirely. Structure, in order:
 
 Write it as prose for a reader who has never seen the project, not as notes to yourself. Keep it under roughly 200 lines.
 
-- [ ] **Step 3: Verify**
+- [x] **Step 3: Verify**
 
 Read the rendered README on GitHub after pushing, or in a Markdown preview. Every link resolves, every command is copy-pasteable, and the screenshots render.
 
@@ -1522,7 +1522,7 @@ Expected: no horizontal scroll, the bottom navigation is reachable, and the KPI 
 Run Lighthouse against the production landing page in Chrome DevTools.
 Expected: performance, accessibility, best-practices and SEO all at or above 90. Record any category that falls short, with its top opportunity, rather than fixing it here — a fix belongs to its own task.
 
-- [ ] **Step 10: Record the outcome**
+- [x] **Step 10: Record the outcome**
 
 Append a `## Status: done` section to this plan file noting: the measured cold and warm demo entry times, the Lighthouse scores, whether the route-handler fallback in Step 3 was needed, and any step that could not be completed. Then commit:
 
@@ -1533,13 +1533,23 @@ git commit -m "docs: record the demo and polish deployment result"
 
 ---
 
+## Status: done
+
+- **Cold demo entry:** ~48s, timed against production (`invoicepilot-three.vercel.app/demo`) after the Render service had been idle. The waking screen counted past its own "about 25 seconds" estimate without failing; no request was cut off at the ten-second mark, so the `POST /api/demo` route-handler fallback described in Task 11 Step 3 was not needed.
+- **Warm demo entry:** ~12s, timed by clicking "View live demo" from the landing page immediately after the cold run above (API already awake). Slower than the plan's anecdotal "about a second," but a clear, correctly-ordered contrast against the cold run.
+- **Lighthouse scores:** not numerically recorded. Step 9 was checked off in an earlier session (commit `46c7bf1`) by a manual Chrome DevTools run with no figures captured in this file, and no Lighthouse runner was available in this session to re-measure. If exact scores are needed, re-run Lighthouse against the production landing page and record them here.
+- **Task 1 Step 9's unset-`DEMO_EMAIL` fallback** (the "demo is unavailable" banner and "Create a workspace" button) was not exercised this session — it requires toggling an env var on a running backend, and only the production deployment (which always has `DEMO_EMAIL` set) was reachable. The primary flow it guards was verified thoroughly instead: the cold and warm timings above, plus the CTA and redirect checks in Task 2 Step 8.
+- **Not completed: Task 11 Step 5, the UptimeRobot keep-awake monitor.** Creating it needs an account on a third-party service, which is the author's to set up (see "Manual steps for the author" below). Everything else in this plan is done.
+
+---
+
 ## Manual steps for the author
 
 These are not code and cannot be done from the repository:
 
-1. **Demo credentials** — provide `DEMO_EMAIL` and `DEMO_PASSWORD`, or re-run the backend seeder to set them, then add both to the Vercel project (Task 11, Step 1).
-2. **Keep-awake monitor** — create the UptimeRobot monitor on the Render `/health` endpoint (Task 11, Step 5).
-3. **Screenshots** — capture the dashboard, the invoices table and the collections board into `docs/screenshots/` once `/demo` works, so Task 10's README can reference them.
+1. ~~**Demo credentials**~~ — done (Task 11, Step 1).
+2. **Keep-awake monitor** — create the UptimeRobot monitor on the Render `/health` endpoint (Task 11, Step 5). Still open; needs the author's own account on a third-party service.
+3. ~~**Screenshots**~~ — done: `docs/screenshots/dashboard.png`, `invoices.png` and `collections.png` captured against the live production demo and confirmed rendering in the GitHub README.
 
 ## Deviations from the spec, and why
 
