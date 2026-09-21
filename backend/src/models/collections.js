@@ -70,6 +70,59 @@ export async function listQueue(sql, workspaceId, limit) {
   `;
 }
 
+/** The one scalar aiInsightFor needs that no row-level query carries: how
+ *  much of the whole overdue book this one invoice's balance is a share of. */
+export async function getOverdueTotal(sql, workspaceId) {
+  const [row] = await sql`
+    SELECT COALESCE(SUM(balance_cents), 0)::bigint AS total_cents
+    FROM invoice_state
+    ${inWorkspace(sql, workspaceId)} AND is_overdue
+  `;
+  return row.total_cents;
+}
+
+/**
+ * The three headline numbers on the "AI collection insights" panel. Three
+ * scalar subqueries rather than one clever join: each reads over a
+ * different slice of the ledger (the full overdue book, the open book
+ * restricted to what's about to tip overdue, and the top of the recovery
+ * queue), and combining them into one FROM clause would cost more to read
+ * than the extra subqueries cost to run at this scale.
+ */
+export async function getInsightsSummary(sql, workspaceId) {
+  const [row] = await sql`
+    SELECT
+      COALESCE((
+        SELECT SUM(i.balance_cents)
+        FROM invoice_state i
+        JOIN customer_stats cs
+          ON cs.customer_id = i.customer_id AND cs.workspace_id = i.workspace_id
+        WHERE i.workspace_id = ${workspaceId} AND i.is_overdue
+          AND i.days_overdue <= 30 AND cs.risk <> 'high'
+      ), 0)::bigint AS recoverable_cents,
+      (
+        SELECT COUNT(*)
+        FROM invoice_state i
+        JOIN customer_stats cs
+          ON cs.customer_id = i.customer_id AND cs.workspace_id = i.workspace_id
+        WHERE i.workspace_id = ${workspaceId} AND i.status NOT IN ('draft', 'paid')
+          AND i.days_overdue <= 0 AND i.days_overdue > -7 AND cs.risk <> 'low'
+      )::int AS at_risk_count,
+      (
+        -- collection_queue is already one row per customer, so counting rows
+        -- here is counting distinct customers -- no COUNT(DISTINCT ...) needed.
+        SELECT COUNT(*) FROM (
+          SELECT risk FROM collection_queue
+          WHERE workspace_id = ${workspaceId}
+          ORDER BY recovery_score DESC
+          LIMIT 12
+        ) top
+        WHERE risk = 'high'
+      )::int AS contact_count
+  `;
+  return row;
+}
+
 /** Called from the invoices controller, not its own route: an invoice's
  *  timeline is collection_events filtered by invoice_id, and the caller has
  *  already confirmed the invoice exists in this workspace. */

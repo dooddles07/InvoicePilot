@@ -11,6 +11,8 @@ export function collectionsRouter(sql, config) {
 
   router.get("/pipeline", requirePermission("invoice:read"), controller.pipeline);
   router.get("/queue", requirePermission("invoice:read"), controller.queue);
+  router.get("/insights", requirePermission("invoice:read"), controller.insights);
+  router.get("/summary", requirePermission("invoice:read"), controller.summary);
   router.post("/reminders", requirePermission("invoice:write"), controller.reminders);
 
   return router;

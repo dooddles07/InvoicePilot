@@ -1,12 +1,16 @@
 import { z } from "zod";
 
 import * as collections from "../models/collections.js";
-import { aiNoteFor } from "../services/collections.js";
+import { aiInsightFor, aiNoteFor } from "../services/collections.js";
 import { notImplemented } from "./not-implemented.js";
 import { parse } from "./query.js";
 
 const queueQuery = z.object({
   limit: z.coerce.number().int().min(1).max(50).default(5),
+});
+
+const insightsQuery = z.object({
+  limit: z.coerce.number().int().min(1).max(20).default(3),
 });
 
 export function collectionsController(sql) {
@@ -33,6 +37,22 @@ export function collectionsController(sql) {
           ai_note: aiNoteFor(row),
         })),
       });
+    },
+
+    async insights(request, response) {
+      const workspaceId = request.principal.workspaceId;
+      const { limit } = parse(insightsQuery, request.query);
+      const [rows, overdueTotalCents] = await Promise.all([
+        collections.listQueue(sql, workspaceId, limit),
+        collections.getOverdueTotal(sql, workspaceId),
+      ]);
+      response.json({
+        data: rows.map((row, i) => aiInsightFor(row, i + 1, overdueTotalCents, workspaceId)),
+      });
+    },
+
+    async summary(request, response) {
+      response.json(await collections.getInsightsSummary(sql, request.principal.workspaceId));
     },
 
     reminders: notImplemented,

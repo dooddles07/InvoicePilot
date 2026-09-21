@@ -48,3 +48,35 @@ export function aiNoteFor(row) {
     ? "This account normally pays on terms, so the delay is out of character. A short reminder naming the invoice number is usually all it takes."
     : `This account usually pays ${beyond} day${beyond === 1 ? "" : "s"} beyond terms. A short, specific reminder naming the invoice number tends to be enough.`;
 }
+
+/**
+ * The dashboard's "AI collection insights" cards. Same source row as
+ * aiNoteFor -- models/collections.js's listQueue -- reshaped for a
+ * different panel: a headline, a reasoning sentence naming this invoice's
+ * share of the overdue book, and a confidence score that climbs with days
+ * overdue rather than resets per invoice.
+ */
+export function aiInsightFor(row, priority, overdueTotalCents, workspaceId) {
+  const escalate = row.days_overdue > 30;
+  const share = Math.round((row.balance_cents / (overdueTotalCents || 1)) * 100);
+
+  return {
+    id: `ai_${row.invoice_id}`,
+    workspace_id: workspaceId,
+    priority,
+    customer_id: row.customer_id,
+    customer_name: row.customer_name,
+    invoice_id: row.invoice_id,
+    amount_cents: row.balance_cents,
+    headline: escalate
+      ? `Payment is ${row.days_overdue} days overdue`
+      : row.risk === "high"
+        ? "High likelihood of further delay"
+        : "Balance is slipping past terms",
+    reasoning: `${row.customer_name} settles on time ${row.on_time_rate}% of the time and averages ${row.avg_days_to_pay} days against ${row.payment_terms_days}-day terms. This invoice is ${row.days_overdue} days past due and accounts for ${share}% of your overdue balance.`,
+    recommended_action: escalate ? "Send escalation" : "Contact today",
+    action_kind: escalate ? "send_escalation" : "send_reminder",
+    confidence: Math.min(0.95, 0.62 + row.days_overdue / 220),
+    created_at: new Date().toISOString(),
+  };
+}
