@@ -3,18 +3,19 @@ import express from "express";
 import { errorHandler } from "./middleware/errors.js";
 import { adminRouter } from "./routes/admin.js";
 import { aiRouter } from "./routes/ai.js";
+import { apiKeysRouter } from "./routes/apiKeys.js";
 import { auditRouter } from "./routes/audit.js";
 import { authRouter } from "./routes/auth.js";
 import { automationsRouter } from "./routes/automations.js";
 import { billingRouter } from "./routes/billing.js";
 import { collectionsRouter } from "./routes/collections.js";
 import { customersRouter } from "./routes/customers.js";
-import { integrationsRouter } from "./routes/integrations.js";
 import { invoicesRouter } from "./routes/invoices.js";
 import { notificationsRouter } from "./routes/notifications.js";
 import { paymentsRouter } from "./routes/payments.js";
 import { reportsRouter } from "./routes/reports.js";
 import { usersRouter } from "./routes/users.js";
+import { webhooksRouter } from "./routes/webhooks.js";
 import { workspacesRouter } from "./routes/workspaces.js";
 
 /**
@@ -45,10 +46,11 @@ export function createApp(config, sql) {
     ["/api/automations", automationsRouter],
     ["/api/notifications", notificationsRouter],
     ["/api/reports", reportsRouter],
-    ["/api/integrations", integrationsRouter],
     ["/api/ai", aiRouter],
     ["/api/billing", billingRouter],
     ["/api/audit", auditRouter],
+    ["/api/api-keys", apiKeysRouter],
+    ["/api/webhooks", webhooksRouter],
     ["/api/admin", adminRouter],
   ]) {
     app.use(path, router(sql, config));
