@@ -332,7 +332,13 @@ drafts.sort((a, b) => a.issue.getTime() - b.issue.getTime());
 let invoiceSeq = 380;
 const yearOf = (d: Date) => d.getUTCFullYear();
 
-export const invoices: Invoice[] = drafts.map((d) => {
+// Invoice has no `items` field: the API splits it into InvoiceDetail, since a
+// list response paying for every invoice's line items is wasted bandwidth
+// nothing renders. The fixture ledger has no such split -- every invoice
+// carries its items -- so its exported type says so.
+type SeedInvoice = Invoice & { items: InvoiceItem[] };
+
+export const invoices: SeedInvoice[] = drafts.map((d) => {
   const invoiceId = id("inv");
   // Negative until the due date passes, so "upcoming" is a real state rather
   // than a bucket that can never be reached.
@@ -396,7 +402,7 @@ export const invoices: Invoice[] = drafts.map((d) => {
     po_number: rnd() < 0.45 ? `PO-${intBetween(10000, 99999)}` : null,
     notes: null,
     items,
-  } satisfies Invoice;
+  } satisfies SeedInvoice;
 });
 
 /* ------------------------------------------------------------------ */
