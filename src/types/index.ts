@@ -356,7 +356,9 @@ export interface AuditLogEntry {
   actor: string;
   action: string;
   target: string;
-  ip: string;
+  /** Not captured by every write path yet -- null rather than a fake
+   *  address for one that hasn't recorded it. */
+  ip: string | null;
   occurred_at: ISODate;
 }
 
@@ -368,13 +370,15 @@ export interface UsageMeter {
 
 /* ---------- settings ---------- */
 
+export type EmailTemplateTone = "friendly" | "firm" | "final";
+
 export interface EmailTemplate {
   id: UUID;
   workspace_id: UUID;
   name: string;
+  tone: EmailTemplateTone;
   subject: string;
   body: string;
-  used_by: string[];
   updated_at: ISODate;
 }
 
