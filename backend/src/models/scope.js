@@ -39,10 +39,17 @@ export function firstOr404(rows, label) {
  * cost is nothing and the failure mode of skipping it is the whole table.
  * `id` breaks ties -- without it, two rows sharing a sort value can appear on
  * two pages or on neither as the underlying data changes between requests.
+ *
+ * `alias` qualifies both the sort column and `id`, and is required whenever
+ * the query joins more than one table that could share a column name with
+ * the sortable one -- payments and invoices both have amount_cents, so an
+ * unqualified sort there is as ambiguous as an unqualified workspace_id.
  */
-export function orderPage(sql, { sort, order, limit, offset }) {
+export function orderPage(sql, { sort, order, limit, offset }, alias = null) {
+  const sortColumn = alias === null ? sql(sort) : sql`${sql(alias)}.${sql(sort)}`;
+  const id = alias === null ? sql`id` : sql`${sql(alias)}.id`;
   return sql`
-    ORDER BY ${sql(sort)} ${order === "asc" ? sql`ASC` : sql`DESC`}, id
+    ORDER BY ${sortColumn} ${order === "asc" ? sql`ASC` : sql`DESC`}, ${id}
     LIMIT ${limit} OFFSET ${offset}
   `;
 }
