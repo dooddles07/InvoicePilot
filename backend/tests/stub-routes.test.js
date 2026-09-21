@@ -96,9 +96,10 @@ function key(method, path) {
   return `${method} ${path}`;
 }
 
-// These 6 are real; their behaviour is asserted by auth-routes.test.js, not
-// here. Every phase of the fixtures-to-API conversion moves rows out of
-// NOT_IMPLEMENTED, below, as it wires the domain behind them.
+// Endpoints not in this set are real; their behaviour is asserted by their
+// own route test file, not here. Every phase of the fixtures-to-API
+// conversion adds to it as a domain's controller stops re-exporting the stub
+// handler.
 const REAL = new Set([
   key("POST", "/api/auth/signup"),
   key("POST", "/api/auth/login"),
@@ -106,6 +107,11 @@ const REAL = new Set([
   key("POST", "/api/auth/logout"),
   key("POST", "/api/auth/switch-workspace"),
   key("GET", "/api/users/me"),
+
+  // invoices-routes.test.js
+  key("GET", "/api/invoices"),
+  key("GET", "/api/invoices/i-1"),
+  key("GET", "/api/invoices/i-1/events"),
 ]);
 
 const NOT_IMPLEMENTED = new Set(
@@ -158,7 +164,7 @@ describe("the endpoint inventory", () => {
   });
 
   it("tracks exactly the endpoints still not implemented", () => {
-    assert.equal(NOT_IMPLEMENTED.size, 49);
+    assert.equal(NOT_IMPLEMENTED.size, 46);
   });
 });
 
