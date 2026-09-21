@@ -1,10 +1,11 @@
 import { Router } from "express";
 
-import * as controller from "../controllers/ai.js";
+import { aiController } from "../controllers/ai.js";
 import { authenticate } from "../middleware/authenticate.js";
 import { requirePermission } from "../middleware/require.js";
 
 export function aiRouter(sql, config) {
+  const controller = aiController(sql);
   const router = Router();
   router.use(authenticate(config.secretKey));
 
