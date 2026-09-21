@@ -427,12 +427,52 @@ export async function seedDemoWorkspace(
   });
   await insertRows(sql, "collection_events", events);
 
+  // The audit log is a sample of the same events, not a parallel history:
+  // reusing their invoice/timestamp is what keeps a seeded row
+  // indistinguishable from one a real write (services/invoices.js) produces.
+  // Every action type below is one that path actually writes; call_logged,
+  // invoice_viewed and automation_ran have no admin-write equivalent, so
+  // they stay out of the audit trail the same way they would in production.
+  // The event's own actor is not reused: services/invoices.js always
+  // attributes a write to the staff member who clicked, including a
+  // dispute -- never to "InvoicePilot" or to the customer, which is what
+  // invoice_sent and dispute_raised put in collection_events.actor.
+  const AUDIT_ACTION = {
+    invoice_sent: "invoice.sent",
+    reminder_sent: "reminder.sent",
+    escalation_sent: "reminder.sent",
+    dispute_raised: "invoice.updated",
+    payment_received: "payment.recorded",
+  };
+  const STAFF = Object.freeze([
+    { label: "Alex Mercer", userId: ownerUserId },
+    { label: "Priya Raman", userId: null },
+  ]);
+  const auditLogs = events
+    .filter((e) => AUDIT_ACTION[e.type])
+    .map((e) => {
+      const staff = rng.pick(STAFF);
+      return {
+        id: randomUUID(),
+        workspace_id: workspaceId,
+        actor_user_id: staff.userId,
+        actor_label: staff.label,
+        action: AUDIT_ACTION[e.type],
+        target_type: "invoice",
+        target_id: e.invoice_id,
+        ip: `203.0.113.${rng.intBetween(1, 254)}`,
+        occurred_at: e.occurred_at,
+      };
+    });
+  await insertRows(sql, "audit_logs", auditLogs);
+
   return {
     customers: customers.length,
     invoices: invoices.length,
     items: items.length,
     payments: payments.length,
     events: events.length,
+    audit_logs: auditLogs.length,
   };
 }
 
