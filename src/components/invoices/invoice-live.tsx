@@ -1,20 +1,28 @@
 "use client";
 
-import { createContext, useContext, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { createContext, useContext, useOptimistic, useTransition } from "react";
 import type { ReactNode } from "react";
 
 import { InvoiceActions } from "@/components/invoices/invoice-actions";
 import { InvoiceStatusBadge } from "@/components/invoicepilot/status-badge";
+import type { RecordPaymentValues } from "@/components/invoicepilot/record-payment-dialog";
+import type { SendReminderValues } from "@/components/invoicepilot/send-reminder-dialog";
 import { Timeline } from "@/components/invoicepilot/timeline";
+import { markDisputed, recordPayment, sendInvoice } from "@/lib/actions/invoices";
 import { applyPayment, markReminded } from "@/lib/data/mutate";
 import { formatDate, money } from "@/lib/format";
 import type { CollectionEvent, Invoice } from "@/types";
 
+type ActionOutcome = { ok: boolean; message?: string };
+
 type LiveState = {
   invoice: Invoice;
   events: CollectionEvent[];
-  record: (amountCents: number, receivedOn: string) => void;
-  remind: () => void;
+  pending: boolean;
+  record: (values: RecordPaymentValues) => Promise<ActionOutcome>;
+  remind: (values: SendReminderValues) => Promise<ActionOutcome>;
+  dispute: () => Promise<ActionOutcome>;
 };
 
 const InvoiceLiveContext = createContext<LiveState | null>(null);
@@ -43,52 +51,94 @@ export function InvoiceLiveProvider({
   today: string;
   children: ReactNode;
 }) {
-  const [current, setCurrent] = useState(invoice);
-  const [log, setLog] = useState(events);
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
 
-  const value = useMemo<LiveState>(
-    () => ({
-      invoice: current,
-      events: log,
-      record: (amountCents, receivedOn) => {
-        setCurrent((inv) => applyPayment(inv, amountCents, receivedOn));
-        setLog((entries) => [
-          {
-            id: `local-payment-${entries.length}`,
-            workspace_id: current.workspace_id,
-            invoice_id: current.id,
-            customer_id: current.customer_id,
+  // Both derive from the server-fetched props, which is why neither is a
+  // plain useState: router.refresh() re-renders this provider's parent with
+  // fresh data, and useOptimistic snaps back to that real value on its own
+  // once the transition settles -- correct whether the action succeeded (the
+  // guess matched, or is quietly corrected) or failed (the guess reverts,
+  // since the real props never moved). revalidatePath alone marks the route
+  // stale but does not itself repaint a page the user never navigated away
+  // from; router.refresh() is what asks for the repaint.
+  const [optimisticInvoice, applyOptimisticInvoice] = useOptimistic(invoice);
+  const [optimisticEvents, applyOptimisticEvent] = useOptimistic(
+    events,
+    (state, entry: CollectionEvent) => [entry, ...state],
+  );
+
+  const value: LiveState = {
+    invoice: optimisticInvoice,
+    events: optimisticEvents,
+    pending: isPending,
+
+    record: (values) =>
+      new Promise<ActionOutcome>((resolve) => {
+        startTransition(async () => {
+          applyOptimisticInvoice(
+            applyPayment(optimisticInvoice, values.amountCents, values.receivedOn),
+          );
+          applyOptimisticEvent({
+            id: `optimistic-payment-${values.receivedOn}`,
+            workspace_id: optimisticInvoice.workspace_id,
+            invoice_id: optimisticInvoice.id,
+            customer_id: optimisticInvoice.customer_id,
             type: "payment_received",
             channel: "system",
-            summary: `Payment of ${money(amountCents)} recorded`,
-            detail: `Received ${formatDate(receivedOn)}.`,
+            summary: `Payment of ${money(values.amountCents)} recorded`,
+            detail: null,
             actor: "You",
-            occurred_at: receivedOn,
-          },
-          ...entries,
-        ]);
-      },
-      remind: () => {
-        setCurrent((inv) => markReminded(inv, today));
-        setLog((entries) => [
-          {
-            id: `local-reminder-${entries.length}`,
-            workspace_id: current.workspace_id,
-            invoice_id: current.id,
-            customer_id: current.customer_id,
+            occurred_at: values.receivedOn,
+          });
+          const result = await recordPayment({
+            invoice_id: optimisticInvoice.id,
+            amount_cents: values.amountCents,
+            method: values.method,
+            reference: values.reference,
+            received_at: values.receivedOn,
+          });
+          if (result.ok) router.refresh();
+          resolve(result.ok ? { ok: true } : { ok: false, message: result.message });
+        });
+      }),
+
+    remind: (values) =>
+      new Promise<ActionOutcome>((resolve) => {
+        startTransition(async () => {
+          applyOptimisticInvoice(markReminded(optimisticInvoice, today));
+          applyOptimisticEvent({
+            id: `optimistic-reminder-${values.idempotencyKey}`,
+            workspace_id: optimisticInvoice.workspace_id,
+            invoice_id: optimisticInvoice.id,
+            customer_id: optimisticInvoice.customer_id,
             type: "reminder_sent",
             channel: "email",
-            summary: `Reminder sent to ${current.customer_name}`,
+            summary: `Reminder sent to ${optimisticInvoice.customer_name}`,
             detail: null,
             actor: "You",
             occurred_at: today,
-          },
-          ...entries,
-        ]);
-      },
-    }),
-    [current, log, today],
-  );
+          });
+          const result = await sendInvoice(optimisticInvoice.id, {
+            tone: values.tone,
+            body: values.body,
+            idempotency_key: values.idempotencyKey,
+          });
+          if (result.ok) router.refresh();
+          resolve(result.ok ? { ok: true } : { ok: false, message: result.message });
+        });
+      }),
+
+    dispute: () =>
+      new Promise<ActionOutcome>((resolve) => {
+        startTransition(async () => {
+          applyOptimisticInvoice({ ...optimisticInvoice, status: "disputed" });
+          const result = await markDisputed(optimisticInvoice.id);
+          if (result.ok) router.refresh();
+          resolve(result.ok ? { ok: true } : { ok: false, message: result.message });
+        });
+      }),
+  };
 
   return (
     <InvoiceLiveContext.Provider value={value}>
@@ -128,7 +178,7 @@ export function InvoiceLiveActions({ contactName, today }: {
   contactName: string;
   today: string;
 }) {
-  const { invoice, record, remind } = useLive();
+  const { invoice, record, remind, dispute } = useLive();
 
   return (
     <InvoiceActions
@@ -137,6 +187,7 @@ export function InvoiceLiveActions({ contactName, today }: {
       today={today}
       onRecorded={record}
       onSent={remind}
+      onDisputed={dispute}
     />
   );
 }

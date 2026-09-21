@@ -3,8 +3,14 @@
 import { Download, Ellipsis, FileText, Pencil, Trash2, XCircle } from "lucide-react";
 import { toast } from "sonner";
 
-import { RecordPaymentDialog } from "@/components/invoicepilot/record-payment-dialog";
-import { SendReminderDialog } from "@/components/invoicepilot/send-reminder-dialog";
+import {
+  RecordPaymentDialog,
+  type RecordPaymentValues,
+} from "@/components/invoicepilot/record-payment-dialog";
+import {
+  SendReminderDialog,
+  type SendReminderValues,
+} from "@/components/invoicepilot/send-reminder-dialog";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -25,12 +31,14 @@ export function InvoiceActions({
   today,
   onRecorded,
   onSent,
+  onDisputed,
 }: {
   invoice: Invoice;
   contactName: string;
   today: string;
-  onRecorded?: (amountCents: number, receivedOn: string) => void;
-  onSent?: () => void;
+  onRecorded?: (values: RecordPaymentValues) => Promise<{ ok: boolean; message?: string }>;
+  onSent?: (values: SendReminderValues) => Promise<{ ok: boolean; message?: string }>;
+  onDisputed?: () => Promise<{ ok: boolean; message?: string }>;
 }) {
   const settled = invoice.status === "paid";
   const tone =
@@ -88,11 +96,16 @@ export function InvoiceActions({
             Duplicate invoice
           </DropdownMenuItem>
           <DropdownMenuItem
-            onClick={() =>
+            onClick={async () => {
+              const result = await onDisputed?.();
+              if (result && !result.ok) {
+                toast.error("Could not mark as disputed", { description: result.message });
+                return;
+              }
               toast("Marked as disputed", {
                 description: "Reminders are paused until the dispute is resolved.",
-              })
-            }
+              });
+            }}
           >
             <XCircle className="size-4" />
             Mark as disputed
