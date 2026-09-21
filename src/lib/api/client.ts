@@ -12,7 +12,7 @@ import { readAccessToken } from "@/lib/auth/cookies";
  * path. That is what keeps the API surface changeable without a grep across
  * the app directory.
  */
-const BASE_URL = process.env.API_BASE_URL ?? "http://127.0.0.1:8000";
+const BASE_URL = process.env.API_BASE_URL ?? "http://127.0.0.1:3001";
 
 export class ApiError extends Error {
   constructor(
@@ -31,8 +31,6 @@ type RequestOptions<T> = {
   /** Pass explicitly when the caller holds a token the cookie does not yet
    *  have — a login response, or proxy.ts mid-rotation. */
   token?: string | null;
-  /** Next cache tags for reads. Writes pass nothing and are never cached. */
-  tags?: string[];
 };
 
 export async function apiFetch<T>(
@@ -50,9 +48,9 @@ export async function apiFetch<T>(
     },
     body: options.body === undefined ? undefined : JSON.stringify(options.body),
     // Every response is per-user. Caching one would serve one tenant's ledger
-    // to another.
+    // to another. Which also rules out cache tags: an uncached fetch has no
+    // entry to tag, so writes invalidate with revalidatePath instead.
     cache: "no-store",
-    ...(options.tags ? { next: { tags: options.tags } } : {}),
   });
 
   if (!response.ok) {

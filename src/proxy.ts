@@ -100,7 +100,7 @@ async function rotate(
 ): Promise<{ access_token: string; refresh_token: string; expires_in: number } | null> {
   try {
     const response = await fetch(
-      `${process.env.API_BASE_URL ?? "http://127.0.0.1:8000"}/api/auth/refresh`,
+      `${process.env.API_BASE_URL ?? "http://127.0.0.1:3001"}/api/auth/refresh`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
