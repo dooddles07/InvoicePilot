@@ -4,20 +4,16 @@ import { TopBar, type Notification } from "@/components/shell/top-bar";
 import type { CommandTarget } from "@/components/shell/command-menu";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { DemoBanner } from "@/components/invoicepilot/demo-banner";
-import {
-  customers,
-  getNeedsAttention,
-  invoices,
-  overdueInvoices,
-} from "@/lib/data";
+import { customers } from "@/lib/data";
+import { getInvoices } from "@/lib/api/invoices";
 import { money } from "@/lib/format";
 import { requireSession } from "@/lib/api/session";
 import type { Workspace } from "@/types";
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
-  // The only unfaked data in this layout for now: who is signed in, and which
-  // workspace their token is scoped to. Everything below is still fixtures
-  // until plan 3 converts the read path.
+  // Invoices are real as of Phase 2; customers stay fixtures until Phase 3
+  // converts /customers, so commandCustomers below is the one thing here
+  // still reading from the seed.
   const session = await requireSession();
 
   const currentUser = {
@@ -36,8 +32,15 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   const workspaces = [activeWorkspace];
 
   // The shell is a Server Component: search targets and counts are computed
-  // once here rather than shipping the whole ledger to the client.
-  const commandInvoices: CommandTarget[] = invoices.slice(0, 40).map((i) => ({
+  // once here rather than shipping the whole ledger to the client. Two calls,
+  // not three: the overdue-ranked fetch below supplies both the notification
+  // list and, from its `total`, the overdue count -- no separate count query.
+  const [commandInvoicesResult, overdueResult] = await Promise.all([
+    getInvoices({ limit: 40 }),
+    getInvoices({ overdue: true, sort: "balance_cents", order: "desc", limit: 4 }),
+  ]);
+
+  const commandInvoices: CommandTarget[] = commandInvoicesResult.data.map((i) => ({
     id: i.id,
     label: i.number,
     sublabel: i.customer_name,
@@ -52,12 +55,17 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
     href: `/customers/${c.id}`,
   }));
 
-  const notifications: Notification[] = getNeedsAttention(4).map((item) => ({
-    id: item.invoice_id,
-    title: `${item.customer_name} — ${money(item.balance_cents)}`,
-    detail: `${item.invoice_number} · ${item.recommended_action}`,
-    href: `/invoices/${item.invoice_id}`,
-    when: `${item.days_overdue} days overdue`,
+  const overdueCount = overdueResult.total;
+
+  // recommended_action is next_action as the invoices view derives it; the
+  // richer cross-customer ai_note (payment history, last-contacted timing)
+  // is collections work and lands with that domain.
+  const notifications: Notification[] = overdueResult.data.map((i) => ({
+    id: i.id,
+    title: `${i.customer_name} — ${money(i.balance_cents)}`,
+    detail: `${i.number} · ${i.next_action ?? "Follow up"}`,
+    href: `/invoices/${i.id}`,
+    when: `${i.days_overdue} days overdue`,
   }));
 
   return (
@@ -66,7 +74,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
         workspaces={workspaces}
         activeWorkspaceId={activeWorkspace.id}
         user={currentUser}
-        overdueCount={overdueInvoices.length}
+        overdueCount={overdueCount}
       />
       <SidebarInset className="min-w-0">
         <TopBar
@@ -80,7 +88,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
           {children}
         </div>
       </SidebarInset>
-      <MobileNav overdueCount={overdueInvoices.length} />
+      <MobileNav overdueCount={overdueCount} />
     </SidebarProvider>
   );
 }
