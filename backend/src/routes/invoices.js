@@ -1,10 +1,11 @@
 import { Router } from "express";
 
-import * as controller from "../controllers/invoices.js";
+import { invoicesController } from "../controllers/invoices.js";
 import { authenticate } from "../middleware/authenticate.js";
 import { requirePermission } from "../middleware/require.js";
 
 export function invoicesRouter(sql, config) {
+  const controller = invoicesController(sql);
   const router = Router();
   router.use(authenticate(config.secretKey));
 
