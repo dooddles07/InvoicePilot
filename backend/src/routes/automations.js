@@ -1,12 +1,13 @@
 import { Router } from "express";
 
-import * as controller from "../controllers/automations.js";
+import { automationsController } from "../controllers/automations.js";
 import { authenticate } from "../middleware/authenticate.js";
 import { requirePermission } from "../middleware/require.js";
 
 export function automationsRouter(sql, config) {
+  const controller = automationsController(sql);
   const router = Router();
-  router.use(authenticate(config.secretKey));
+  router.use(authenticate(sql, config.secretKey));
 
   router.get("/", requirePermission("automation:read"), controller.list);
   router.post("/", requirePermission("automation:write"), controller.create);
