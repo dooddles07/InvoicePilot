@@ -25,6 +25,34 @@ export async function makeUser(tx, options = {}) {
   return rows[0].id;
 }
 
+export async function makeMember(tx, workspaceId, userId, options = {}) {
+  const rows = await tx`
+    INSERT INTO workspace_members (id, workspace_id, user_id, role, status)
+    VALUES (gen_random_uuid(), ${workspaceId}, ${userId}, ${options.role ?? "member"}, ${options.status ?? "active"})
+    RETURNING id
+  `;
+  return rows[0].id;
+}
+
+// target_id is NOT NULL in the schema -- a caller not testing the invoice
+// join specifically still needs a syntactically valid (if unmatched) uuid.
+export async function makeAuditLog(tx, workspaceId, options = {}) {
+  const offset = options.occurredOffsetDays ?? 0;
+  const rows = await tx`
+    INSERT INTO audit_logs (
+      id, workspace_id, actor_user_id, actor_label, action, target_type, target_id, ip, occurred_at
+    ) VALUES (
+      gen_random_uuid(), ${workspaceId}, ${options.actorUserId ?? null}, ${options.actorLabel ?? "Test User"},
+      ${options.action ?? "invoice.sent"}, ${options.targetType ?? "invoice"},
+      ${options.targetId ?? crypto.randomUUID()},
+      ${options.ip ?? "203.0.113.1"},
+      (CURRENT_DATE + CAST(${offset} AS integer))::timestamptz
+    )
+    RETURNING id
+  `;
+  return rows[0].id;
+}
+
 export async function makeWorkspace(tx) {
   const rows = await tx`
     INSERT INTO workspaces (id, name, slug)
