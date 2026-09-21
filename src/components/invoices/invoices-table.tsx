@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useMemo, useOptimistic, useState, useTransition } from "react";
 import {
   flexRender,
   useTable,
@@ -60,6 +61,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { recordPayment, sendInvoice } from "@/lib/actions/invoices";
 import { OPEN_STATUSES } from "@/lib/data";
 import { markPaid, markReminded } from "@/lib/data/mutate";
 import { formatDateShort, money, dueLabel } from "@/lib/format";
@@ -116,16 +118,60 @@ export function InvoicesTable({
   const [rowSelection, setRowSelection] = useState({});
   const [age, setAge] = useState<AgeFilter>("open");
 
-  // A local copy so an action changes what is on screen. The write itself is
-  // not real yet — see the demo banner — but the row must not sit there
-  // unchanged after the person acted on it, or every screen reads as a
-  // screenshot.
-  const [invoiceRows, setInvoiceRows] = useState(invoices);
-
-  const patch = (ids: string[], fn: (invoice: Invoice) => Invoice) =>
-    setInvoiceRows((current) =>
+  // Derives from the `invoices` prop, which is fresh again once
+  // router.refresh() (below) re-renders the page that fetched it -- not a
+  // plain useState, which would go stale the moment a real write landed.
+  // See invoice-live.tsx's provider for the same pattern.
+  const [invoiceRows, applyPatch] = useOptimistic(
+    invoices,
+    (current, { ids, fn }: { ids: string[]; fn: (invoice: Invoice) => Invoice }) =>
       current.map((invoice) => (ids.includes(invoice.id) ? fn(invoice) : invoice)),
-    );
+  );
+  const router = useRouter();
+  const [, startTransition] = useTransition();
+
+  function markPaidNow(ids: string[]) {
+    const targets = invoiceRows.filter((i) => ids.includes(i.id));
+    startTransition(async () => {
+      applyPatch({ ids, fn: (invoice) => markPaid(invoice, today) });
+      const results = await Promise.all(
+        targets.map((invoice) =>
+          recordPayment({
+            invoice_id: invoice.id,
+            amount_cents: invoice.balance_cents,
+            method: "bank_transfer",
+            received_at: today,
+          }),
+        ),
+      );
+      router.refresh();
+      const failed = results.filter((r) => !r.ok).length;
+      if (failed > 0) {
+        toast.error(
+          `Could not settle ${failed} of ${targets.length} invoice${targets.length === 1 ? "" : "s"}`,
+        );
+      }
+    });
+  }
+
+  function remindNow(ids: string[]) {
+    const targets = invoiceRows.filter((i) => ids.includes(i.id));
+    startTransition(async () => {
+      applyPatch({ ids, fn: (invoice) => markReminded(invoice, today) });
+      const results = await Promise.all(
+        targets.map((invoice) =>
+          sendInvoice(invoice.id, { tone: "friendly", idempotency_key: crypto.randomUUID() }),
+        ),
+      );
+      router.refresh();
+      const failed = results.filter((r) => !r.ok).length;
+      if (failed > 0) {
+        toast.error(
+          `Could not send ${failed} of ${targets.length} reminder${targets.length === 1 ? "" : "s"}`,
+        );
+      }
+    });
+  }
 
   // Age is a row-level predicate rather than a column filter: it spans two
   // fields (status and days overdue) and reads better as one control.
@@ -336,7 +382,7 @@ export function InvoicesTable({
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => {
-                    patch([row.original.id], (invoice) => markPaid(invoice, today));
+                    markPaidNow([row.original.id]);
                     toast.success(`${row.original.number} marked as paid`, {
                       description: `${money(row.original.balance_cents)} settled for ${row.original.customer_name}.`,
                     });
@@ -347,7 +393,7 @@ export function InvoicesTable({
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => {
-                    patch([row.original.id], (invoice) => markReminded(invoice, today));
+                    remindNow([row.original.id]);
                     toast.success("Reminder queued", {
                       description: `A reminder for ${row.original.number} will go to ${row.original.customer_name}.`,
                     });
@@ -514,10 +560,7 @@ export function InvoicesTable({
           size="sm"
           onClick={() => {
             const count = selected.length;
-            patch(
-              selected.map((r) => r.original.id),
-              (invoice) => markReminded(invoice, today),
-            );
+            remindNow(selected.map((r) => r.original.id));
             table.resetRowSelection();
             toast.success("Reminders queued", {
               description: `${count} reminders will be sent from your address.`,
@@ -535,10 +578,7 @@ export function InvoicesTable({
             // derived from the rows this click is about to settle.
             const settled = money(selectedValue);
             const count = selected.length;
-            patch(
-              selected.map((r) => r.original.id),
-              (invoice) => markPaid(invoice, today),
-            );
+            markPaidNow(selected.map((r) => r.original.id));
             table.resetRowSelection();
             toast.success("Marked as paid", {
               description: `${count} invoices settled for ${settled}.`,
