@@ -9,6 +9,8 @@
  */
 import { randomUUID } from "node:crypto";
 
+import { firstOr404, inWorkspace } from "./scope.js";
+
 export const REMINDER_TEMPLATES = Object.freeze([
   Object.freeze({
     name: "Friendly nudge",
@@ -53,4 +55,60 @@ export async function insertEmailTemplates(sql, workspaceId) {
       })),
     )}
   `;
+}
+
+/** Every workspace gets all three tones at signup (insertEmailTemplates
+ *  above), so a missing row means a workspace older than that guarantee --
+ *  404 rather than inventing copy on the fly. */
+export async function findEmailTemplate(sql, workspaceId, tone) {
+  const rows = await sql`
+    SELECT * FROM email_templates ${inWorkspace(sql, workspaceId)} AND tone = ${tone}
+  `;
+  return firstOr404(rows, "Email template");
+}
+
+/**
+ * The whole idempotency mechanism lives in this one INSERT: a double-clicked
+ * send retries with the same idempotency_key, collides with
+ * uq_communication_logs_workspace_key, and DO NOTHING means no row comes
+ * back. The caller is what tells a fresh send (row returned, go call Resend)
+ * from a replay (nothing returned, go re-fetch and hand back what already
+ * happened) -- this function does not guess which one it was asked for.
+ */
+export async function insertCommunicationLogIfNew(sql, workspaceId, row) {
+  const rows = await sql`
+    INSERT INTO communication_logs (
+      id, workspace_id, invoice_id, customer_id, channel, to_address,
+      subject, body, status, idempotency_key, queued_at
+    ) VALUES (
+      ${randomUUID()}, ${workspaceId}, ${row.invoiceId}, ${row.customerId}, 'email',
+      ${row.toAddress}, ${row.subject}, ${row.body}, 'queued',
+      ${row.idempotencyKey}, now()
+    )
+    ON CONFLICT ON CONSTRAINT uq_communication_logs_workspace_key DO NOTHING
+    RETURNING *
+  `;
+  return rows[0] ?? null;
+}
+
+export async function findCommunicationLogByKey(sql, workspaceId, idempotencyKey) {
+  const rows = await sql`
+    SELECT * FROM communication_logs
+    ${inWorkspace(sql, workspaceId)} AND idempotency_key = ${idempotencyKey}
+  `;
+  return firstOr404(rows, "Communication log");
+}
+
+export async function markCommunicationLogDelivered(sql, id, { sent, providerMessageId, error }) {
+  const [row] = await sql`
+    UPDATE communication_logs
+    SET status = ${sent ? "sent" : "failed"},
+        sent_at = ${sent ? sql`now()` : null},
+        provider_message_id = ${providerMessageId},
+        error = ${error},
+        updated_at = now()
+    WHERE id = ${id}
+    RETURNING *
+  `;
+  return row;
 }
