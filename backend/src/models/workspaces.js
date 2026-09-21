@@ -80,6 +80,11 @@ const TENANT_TABLES = [
   "email_templates",
   "import_batches",
   "workspace_members",
+  "webhook_deliveries",
+  "webhook_endpoints",
+  "api_keys",
+  "automation_runs",
+  "automations",
 ];
 
 export async function deleteWorkspaceData(sql, workspaceId) {

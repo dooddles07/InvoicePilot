@@ -12,6 +12,7 @@ export function adminRouter(sql, config) {
   const router = Router();
 
   router.post("/reseed", requireAdminToken(config), controller.reseed);
+  router.post("/run-daily", requireAdminToken(config), controller.runDaily);
 
   return router;
 }
