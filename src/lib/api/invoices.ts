@@ -7,7 +7,7 @@ import type { CollectionEvent, Invoice, InvoiceDetail, InvoiceStatus, RiskLevel 
 import { apiFetch } from "./client";
 import { listOf, toQueryString } from "./list";
 
-const invoiceStatusSchema = z.enum([
+export const invoiceStatusSchema = z.enum([
   "draft",
   "sent",
   "viewed",
@@ -16,11 +16,13 @@ const invoiceStatusSchema = z.enum([
   "disputed",
 ]) satisfies z.ZodType<Exclude<InvoiceStatus, "overdue">>;
 
-const riskSchema = z.enum(["low", "medium", "high"]) satisfies z.ZodType<RiskLevel>;
+export const riskSchema = z.enum(["low", "medium", "high"]) satisfies z.ZodType<RiskLevel>;
 
 // Field for field with backend/src/models/invoices.js's SELECT list, so a
 // backend rename becomes a type error here rather than a blank column.
-const invoiceSchema = z.object({
+// Exported so collections.ts's pipeline schema can extend it with `stage`
+// rather than duplicating every field.
+export const invoiceSchema = z.object({
   id: z.uuid(),
   workspace_id: z.uuid(),
   number: z.string(),
