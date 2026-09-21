@@ -5,14 +5,27 @@ import { InvoicesTable } from "@/components/invoices/invoices-table";
 import { LinkButton } from "@/components/invoicepilot/link-button";
 import { PageHeader } from "@/components/invoicepilot/page-header";
 import { Reveal } from "@/components/motion/reveal";
-import { invoices, NOW, openInvoices, overdueInvoices } from "@/lib/data";
+import { getInvoices } from "@/lib/api/invoices";
+import { handleReadError } from "@/lib/api/client";
 import { money } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Invoices" };
 
-export default function InvoicesPage() {
+export default async function InvoicesPage() {
+  // ponytail: the demo ledger is 460 invoices and the table pages in the
+  // browser. Server-side paging when a workspace outgrows one request.
+  const { data: invoices } = await getInvoices({
+    limit: 500,
+    sort: "due_date",
+    order: "asc",
+  }).catch(handleReadError);
+
+  const openInvoices = invoices.filter((i) => i.status !== "draft" && i.status !== "paid");
   const outstanding = openInvoices.reduce((s, i) => s + i.balance_cents, 0);
-  const overdue = overdueInvoices.reduce((s, i) => s + i.balance_cents, 0);
+  const overdue = invoices
+    .filter((i) => i.is_overdue)
+    .reduce((s, i) => s + i.balance_cents, 0);
+  const today = new Date().toISOString();
 
   return (
     <div className="mx-auto flex max-w-[1400px] flex-col gap-4">
@@ -41,7 +54,7 @@ export default function InvoicesPage() {
       </Reveal>
 
       <Reveal delay={0.04}>
-        <InvoicesTable invoices={invoices} today={NOW.toISOString()} />
+        <InvoicesTable invoices={invoices} today={today} />
       </Reveal>
     </div>
   );

@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import { ArrowLeft, Building2, Mail, Phone, Sparkles } from "lucide-react";
 
 import {
@@ -14,60 +13,45 @@ import { RiskBadge } from "@/components/invoicepilot/status-badge";
 import { Timeline } from "@/components/invoicepilot/timeline";
 import { Reveal } from "@/components/motion/reveal";
 import { Separator } from "@/components/ui/separator";
-import {
-  getCustomer,
-  getInvoice,
-  getInvoiceEvents,
-  invoices,
-  NOW,
-} from "@/lib/data";
+import { handleReadError } from "@/lib/api/client";
+import { getInvoice, getInvoiceEvents } from "@/lib/api/invoices";
 import { dueLabel, formatDate, money } from "@/lib/format";
-import type { Invoice } from "@/types";
+import type { InvoiceDetail } from "@/types";
 import { cn } from "@/lib/utils";
 
-export async function generateStaticParams() {
-  // Only the open book is prerendered; settled invoices render on demand.
-  return invoices.slice(0, 60).map((i) => ({ id: i.id }));
-}
-
+// Per-tenant data cannot prerender: every workspace has its own invoice ids.
 export async function generateMetadata({
   params,
 }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
-  const invoice = getInvoice(id);
-  return { title: invoice ? invoice.number : "Invoice" };
+  const invoice = await getInvoice(id).catch(handleReadError);
+  return { title: invoice.number };
 }
 
 export default async function InvoiceDetailPage({
   params,
 }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const invoice = getInvoice(id);
-  if (!invoice) notFound();
+  const invoice = await getInvoice(id).catch(handleReadError);
+  const { data: events } = await getInvoiceEvents(id).catch(handleReadError);
 
-  const customer = getCustomer(invoice.customer_id);
-  if (!customer) notFound();
-
-  const events = getInvoiceEvents(invoice.id);
   const comms = events.filter((e) =>
     ["reminder_sent", "escalation_sent", "call_logged", "dispute_raised"].includes(
       e.type,
     ),
   );
-  const late = invoice.days_overdue > 0 && invoice.status !== "paid";
+  const late = invoice.is_overdue ?? false;
+  const now = new Date();
+  const today = now.toISOString().slice(0, 10);
 
   const recommendation = buildRecommendation(
     invoice,
-    customer.avg_days_to_pay,
-    customer.contact_name,
+    invoice.customer.avg_days_to_pay,
+    invoice.customer.contact_name,
   );
 
   return (
-    <InvoiceLiveProvider
-      invoice={invoice}
-      events={events}
-      today={NOW.toISOString().slice(0, 10)}
-    >
+    <InvoiceLiveProvider invoice={invoice} events={events} today={today}>
     <div className="mx-auto flex max-w-[1400px] flex-col gap-4">
       <Reveal className="space-y-3">
         <Link
@@ -86,7 +70,7 @@ export default async function InvoiceDetailPage({
               </p>
               <h1 className="text-h1 leading-none font-semibold tracking-tight">
                 <Link
-                  href={`/customers/${customer.id}`}
+                  href={`/customers/${invoice.customer.id}`}
                   className="hover:underline"
                 >
                   {invoice.customer_name}
@@ -105,7 +89,7 @@ export default async function InvoiceDetailPage({
                 >
                   {invoice.status === "paid"
                     ? `Settled ${formatDate(invoice.paid_date!)}`
-                    : dueLabel(invoice.due_date, NOW)}
+                    : dueLabel(invoice.due_date, now)}
                 </span>
               </div>
             </div>
@@ -117,8 +101,8 @@ export default async function InvoiceDetailPage({
 
           <div className="p-3">
             <InvoiceLiveActions
-              contactName={customer.contact_name}
-              today={NOW.toISOString().slice(0, 10)}
+              contactName={invoice.customer.contact_name}
+              today={today}
             />
           </div>
         </div>
@@ -143,7 +127,7 @@ export default async function InvoiceDetailPage({
                 <Field label="Due" value={formatDate(invoice.due_date)} />
                 <Field
                   label="Terms"
-                  value={`${customer.payment_terms_days} days`}
+                  value={`${invoice.customer.payment_terms_days} days`}
                 />
                 <Field label="PO number" value={invoice.po_number ?? "—"} />
               </dl>
@@ -244,9 +228,9 @@ export default async function InvoiceDetailPage({
               </h2>
               <p className="mt-2 text-small">{recommendation}</p>
               <p className="text-muted-foreground mt-2 text-caption">
-                Based on {customer.name}&rsquo;s payment history across{" "}
-                {customer.open_invoice_count > 0
-                  ? `${customer.open_invoice_count} open invoices`
+                Based on {invoice.customer.name}&rsquo;s payment history across{" "}
+                {invoice.customer.open_invoice_count > 0
+                  ? `${invoice.customer.open_invoice_count} open invoices`
                   : "their settled invoices"}
                 . Nothing is sent without your confirmation.
               </p>
@@ -266,20 +250,20 @@ export default async function InvoiceDetailPage({
               </h2>
               <div className="space-y-3 p-4">
                 <Link
-                  href={`/customers/${customer.id}`}
+                  href={`/customers/${invoice.customer.id}`}
                   className="flex items-center gap-2 text-small font-medium hover:underline"
                 >
                   <Building2 className="text-muted-foreground size-4" aria-hidden />
-                  {customer.name}
+                  {invoice.customer.name}
                 </Link>
                 <p className="text-muted-foreground flex items-center gap-2 text-caption">
                   <Mail className="size-3.5 shrink-0" aria-hidden />
-                  <span className="truncate">{customer.email}</span>
+                  <span className="truncate">{invoice.customer.email}</span>
                 </p>
-                {customer.phone ? (
+                {invoice.customer.phone ? (
                   <p className="text-muted-foreground flex items-center gap-2 text-caption">
                     <Phone className="size-3.5 shrink-0" aria-hidden />
-                    {customer.phone}
+                    {invoice.customer.phone}
                   </p>
                 ) : null}
 
@@ -288,17 +272,20 @@ export default async function InvoiceDetailPage({
                 <dl className="grid grid-cols-2 gap-3">
                   <Field
                     label="Outstanding"
-                    value={money(customer.outstanding_cents)}
+                    value={money(invoice.customer.outstanding_cents)}
                   />
                   <Field
                     label="On-time rate"
-                    value={`${customer.on_time_rate}%`}
+                    value={`${invoice.customer.on_time_rate}%`}
                   />
                   <Field
                     label="Avg days to pay"
-                    value={String(customer.avg_days_to_pay)}
+                    value={String(invoice.customer.avg_days_to_pay)}
                   />
-                  <Field label="Risk" value={<RiskBadge risk={customer.risk} />} />
+                  <Field
+                    label="Risk"
+                    value={<RiskBadge risk={invoice.customer.risk} />}
+                  />
                 </dl>
               </div>
             </section>
@@ -346,7 +333,7 @@ function Field({
 }
 
 function buildRecommendation(
-  invoice: Invoice,
+  invoice: InvoiceDetail,
   avgDaysToPay: number,
   contactName: string,
 ): string {
