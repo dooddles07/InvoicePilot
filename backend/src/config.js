@@ -41,5 +41,10 @@ export function loadConfig(env = process.env) {
     secretKey,
     adminToken,
     demoWorkspaceId: env.DEMO_WORKSPACE_ID ?? null,
+    // Both optional: a deployment with neither still boots, and every send
+    // still writes its communication_logs row -- only the network call to
+    // Resend is skipped. See .env.example for why RESEND_TO_EMAIL exists.
+    resendApiKey: env.RESEND_API_KEY || null,
+    resendToEmail: env.RESEND_TO_EMAIL || null,
   };
 }
